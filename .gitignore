@@ -1,0 +1,61 @@
+# =============================================================
+#  Vonix Server Utilities — monorepo .gitignore
+# =============================================================
+
+# ── Gradle ───────────────────────────────────────────────────
+.gradle/
+**/build/
+out/
+!gradle/wrapper/gradle-wrapper.jar
+
+# ── Loom / Architectury caches ───────────────────────────────
+.loom/
+**/.loom/
+**/remapped/
+
+# ── IDE — IntelliJ IDEA ──────────────────────────────────────
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# ── IDE — Eclipse ────────────────────────────────────────────
+.eclipse/
+*.classpath
+*.project
+.settings/
+
+# ── IDE — VS Code ────────────────────────────────────────────
+.vscode/
+
+# ── Minecraft run directories ────────────────────────────────
+**/run/
+runs/
+
+# ── Compiled output & JARs ───────────────────────────────────
+*.jar
+*.class
+!gradle/wrapper/gradle-wrapper.jar
+
+# ── Python ───────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+build_logs/
+*.egg-info/
+
+# ── OS artefacts ─────────────────────────────────────────────
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# ── Logs ─────────────────────────────────────────────────────
+logs/
+*.log
+
+# ── Secrets / local overrides ────────────────────────────────
+local.properties
+*.env
+.env.local

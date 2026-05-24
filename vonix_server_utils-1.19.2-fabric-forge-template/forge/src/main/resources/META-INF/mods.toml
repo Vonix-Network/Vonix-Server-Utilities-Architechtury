@@ -1,0 +1,32 @@
+﻿modLoader = "javafml"
+loaderVersion = "[43,)"
+license = "All Rights Reserved"
+
+[[mods]]
+modId = "vonix_server_utilities"
+version = "${version}"
+displayName = "Vonix Server Utilities"
+authors = "Vonix Network"
+description = '''Server-side utility mod.'''
+
+[[dependencies.vonix_server_utilities]]
+modId = "forge"
+mandatory = true
+versionRange = "[43,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.vonix_server_utilities]]
+modId = "minecraft"
+mandatory = true
+versionRange = "[1.19.2,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.vonix_server_utilities]]
+modId = "architectury"
+mandatory = true
+versionRange = "[6.6.92,)"
+ordering = "AFTER"
+side = "BOTH"
+

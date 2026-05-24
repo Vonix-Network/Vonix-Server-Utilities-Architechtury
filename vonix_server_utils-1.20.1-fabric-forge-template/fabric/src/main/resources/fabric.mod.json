@@ -1,0 +1,31 @@
+﻿{
+  "schemaVersion": 1,
+  "id": "vonix_server_utilities",
+  "version": "${version}",
+  "name": "Vonix Server Utilities",
+  "description": "Server-side utility mod.",
+  "authors": [
+    "Vonix Network"
+  ],
+  "contact": {
+    "sources": "https://github.com/Vonix-Network/ServerUtilities"
+  },
+  "license": "All Rights Reserved",
+  "environment": "server",
+  "entrypoints": {
+    "main": [
+      "network.vonix.serverutilities.fabric.VonixServerUtilitiesFabric"
+    ]
+  },
+  "mixins": [
+    "vonix_server_utilities.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.19.2",
+    "minecraft": "~1.20.1",
+    "java": ">=17",
+    "architectury": ">=9.2.14",
+    "fabric-api": "*"
+  }
+}
+

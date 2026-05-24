@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0B032D">
+    <title>Vonix Server Utilities - Build Manager</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="background-glow left"></div>
+    <div class="background-glow right"></div>
+
+    <header>
+        <div class="logo">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="#FF1493" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M2 17L12 22L22 17" stroke="#FF1493" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M2 12L12 17L22 12" stroke="#FF1493" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            VONIX NETWORK
+        </div>
+    </header>
+
+    <main>
+        <section class="hero">
+            <h1>The Power of <br><span class="highlight">Vonix Server Utilities®</span></h1>
+            <p>Unified Build System for Minecraft Monorepos.</p>
+        </section>
+
+        <div class="app-container">
+            <div class="left-pane">
+                <div class="control-panel">
+                    <div class="selectors">
+                        <div class="select-group">
+                            <label for="project-select">Minecraft Version</label>
+                            <select id="project-select">
+                                <option value="all">Build ALL Versions</option>
+                                <!-- Dynamically populated -->
+                            </select>
+                        </div>
+
+                        <div class="select-group">
+                            <label for="platform-select">Platform</label>
+                            <select id="platform-select">
+                                <option value="all">All Platforms</option>
+                                <option value="fabric">Fabric Only</option>
+                                <option value="forge">Forge Only</option>
+                                <option value="neoforge">NeoForge Only</option>
+                            </select>
+                        </div>
+
+                        <div class="select-group">
+                            <label for="task-select">Task</label>
+                            <select id="task-select">
+                                <option value="build">Build</option>
+                                <option value="cleanbuild">Clean + Build</option>
+                                <option value="clean">Clean Only</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button id="build-btn" class="build-btn">
+                        <span class="icon">🚀</span>
+                        <span class="text">Start Build Process</span>
+                        <span class="arrow">→</span>
+                    </button>
+                </div>
+                
+                <section class="progress-section">
+                    <div class="progress-container">
+                        <div class="progress-bar" id="progress-bar"></div>
+                    </div>
+                    <div class="progress-text" id="progress-text">0% Complete</div>
+                </section>
+            </div>
+
+            <div class="right-pane">
+                <section class="terminal-section">
+                    <div class="terminal-window">
+                        <div class="terminal-header">
+                            <div class="dots">
+                                <span class="dot red"></span>
+                                <span class="dot yellow"></span>
+                                <span class="dot green"></span>
+                            </div>
+                            <div class="terminal-title">Build Output</div>
+                        </div>
+                        <div class="terminal-body" id="terminal-output">
+                            <div class="log-line dim">Awaiting build instructions...</div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,38 @@
+modLoader = "javafml"
+loaderVersion = "[4,)"
+#issueTrackerURL = ""
+license = "Insert License Here"
+
+[[mods]]
+modId = "vonix_server_utilities"
+version = "${version}"
+displayName = "Vonix Server Utilities"
+authors = "Vonix Network"
+description = '''
+Full-featured server utility mod: homes, warps, kits, TPA, teleport, admin tools, world commands, and more.
+'''
+#logoFile = ""
+
+[[dependencies.vonix_server_utilities]]
+modId = "neoforge"
+type = "required"
+versionRange = "[21.1,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.vonix_server_utilities]]
+modId = "minecraft"
+type = "required"
+versionRange = "[1.21.1,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.vonix_server_utilities]]
+modId = "architectury"
+type = "required"
+versionRange = "[13.0.8,)"
+ordering = "AFTER"
+side = "BOTH"
+
+[[mixins]]
+config = "vonix_server_utilities.mixins.json"

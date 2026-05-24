@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs grep *)",
+      "Read(//c/Users/Admin/AppData/Local/Programs/**)",
+      "Read(//c/Users/Admin/scoop/**)",
+      "Read(//c/Users/Admin/**)",
+      "Bash(cmd.exe *)",
+      "Bash(git init *)",
+      "Bash(git remote *)",
+      "Bash(git fetch *)",
+      "Bash(git add *)",
+      "Bash(git commit -m 'Initial commit: Vonix Server Utilities mod structure *)",
+      "Bash(git push *)"
+    ]
+  }
+}
