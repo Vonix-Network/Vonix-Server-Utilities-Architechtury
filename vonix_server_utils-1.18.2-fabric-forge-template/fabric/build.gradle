@@ -25,7 +25,7 @@ configurations {
 }
 
 repositories {
-    maven { url "https://maven.nucleoid.xyz/" }
+    maven { url "https://maven.terraformersmc.com/releases/" }
 }
 
 dependencies {
