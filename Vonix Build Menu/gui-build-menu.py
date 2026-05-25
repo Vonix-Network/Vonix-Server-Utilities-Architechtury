@@ -4,26 +4,33 @@ import json
 import asyncio
 import subprocess
 from pathlib import Path
+
+# Determine directories correctly
+if getattr(sys, 'frozen', False):
+    WEB_DIR = Path(sys.argv[0]).parent.resolve()
+else:
+    WEB_DIR = Path(__file__).parent.resolve()
+
+ROOT_DIR = WEB_DIR.parent
+
+# Add root to path so we can import build_menu.py
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import uvicorn
 import build_menu as bm
 
-# Determine ROOT_DIR correctly if frozen by Nuitka or running normally
-if getattr(sys, 'frozen', False):
-    ROOT_DIR = Path(sys.argv[0]).parent.resolve()
-else:
-    ROOT_DIR = Path(__file__).parent.resolve()
-
 app = FastAPI()
 
 # Mount static files
-app.mount("/static", StaticFiles(directory=str(ROOT_DIR / "web")), name="static")
+app.mount("/static", StaticFiles(directory=str(WEB_DIR)), name="static")
 
 @app.get("/")
 async def get_index():
-    return FileResponse(str(ROOT_DIR / "web" / "index.html"))
+    return FileResponse(str(WEB_DIR / "index.html"))
 
 @app.get("/api/projects")
 async def get_projects():
