@@ -154,6 +154,34 @@ async def websocket_build(websocket: WebSocket):
                 if process.returncode == 0:
                     await send_log(f"✓ Build succeeded for MC {project['mc_version']} / {plat_label}", "green bold")
                     
+                    # Copy release jars
+                    try:
+                        import shutil
+                        releases_dir = ROOT_DIR / "releases"
+                        releases_dir.mkdir(exist_ok=True)
+                        
+                        copied = 0
+                        for lib_dir in project["dir"].rglob("build/libs"):
+                            if "common" in lib_dir.parts:
+                                continue
+                                
+                            for jar in lib_dir.glob("*.jar"):
+                                name = jar.name
+                                if "-sources" not in name and "-dev" not in name and "-shadow" not in name and "-common" not in name:
+                                    parts = name.rsplit("-", 1)
+                                    if len(parts) == 2:
+                                        new_name = f"{parts[0]}-{project['mc_version']}-{parts[1]}"
+                                    else:
+                                        new_name = f"{project['mc_version']}-{name}"
+                                        
+                                    shutil.copy2(jar, releases_dir / new_name)
+                                    copied += 1
+                                    
+                        if copied > 0:
+                            await send_log(f"  Copied {copied} release jar(s) to releases/ folder.", "cyan dim")
+                    except Exception as e:
+                        await send_log(f"  Failed to copy release jars: {e}", "red")
+                    
                     # Update progress
                     current_build += 1
                     percent = (current_build / total_builds) * 100 if total_builds > 0 else 100

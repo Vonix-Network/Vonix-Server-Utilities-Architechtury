@@ -94,8 +94,8 @@ main {
 
 /* App Container */
 .app-container {
-    display: flex;
-    flex-direction: row;
+    display: grid;
+    grid-template-columns: 350px 1fr;
     gap: 2rem;
     padding: 0 2rem 2rem;
     max-width: 1200px;

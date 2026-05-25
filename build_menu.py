@@ -291,6 +291,30 @@ def run_gradle(project: dict, platform: str | None, task: str, java_home: Path) 
 
         if proc.returncode == 0:
             print(c(GREEN + BOLD, f"\n  ✓ Build succeeded for MC {project['mc_version']} / {plat_label}"))
+            
+            # Copy release jars
+            try:
+                releases_dir = ROOT / "releases"
+                releases_dir.mkdir(exist_ok=True)
+                copied = 0
+                for lib_dir in proj_dir.rglob("build/libs"):
+                    if "common" in lib_dir.parts:
+                        continue
+                    for jar in lib_dir.glob("*.jar"):
+                        name = jar.name
+                        if "-sources" not in name and "-dev" not in name and "-shadow" not in name and "-common" not in name:
+                            parts = name.rsplit("-", 1)
+                            if len(parts) == 2:
+                                new_name = f"{parts[0]}-{project['mc_version']}-{parts[1]}"
+                            else:
+                                new_name = f"{project['mc_version']}-{name}"
+                            shutil.copy2(jar, releases_dir / new_name)
+                            copied += 1
+                if copied > 0:
+                    print(c(DIM, f"  Copied {copied} release jar(s) to releases/ folder."))
+            except Exception as e:
+                print(c(RED, f"  Failed to copy release jars: {e}"))
+                
             return True
         else:
             print(c(RED + BOLD, f"\n  ✗ Build FAILED for MC {project['mc_version']} / {plat_label}"))
