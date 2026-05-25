@@ -60,38 +60,6 @@ img, svg {
     background: var(--accent-magenta);
 }
 
-/* Header */
-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1.5rem 4rem;
-    border-bottom: 1px solid var(--glass-border);
-    background: rgba(11, 3, 45, 0.8);
-    backdrop-filter: blur(10px);
-}
-
-.logo {
-    font-weight: 800;
-    letter-spacing: 2px;
-    font-size: 1.2rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-nav a {
-    color: var(--text-main);
-    text-decoration: none;
-    margin-left: 2rem;
-    font-weight: 600;
-    font-size: 0.9rem;
-    transition: color 0.3s;
-}
-nav a:hover {
-    color: var(--accent-magenta);
-}
-
 .hero {
     text-align: center;
     padding: 2rem 2rem 1rem;
@@ -121,7 +89,7 @@ h1 {
 main {
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 75px); /* Header approx height */
+    height: 100vh;
 }
 
 /* App Container */
