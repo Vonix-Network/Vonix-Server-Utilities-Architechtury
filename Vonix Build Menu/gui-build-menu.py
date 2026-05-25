@@ -5,13 +5,35 @@ import asyncio
 import subprocess
 from pathlib import Path
 
-# Determine directories correctly
-if getattr(sys, 'frozen', False):
-    WEB_DIR = Path(sys.argv[0]).parent.resolve()
-else:
-    WEB_DIR = Path(__file__).parent.resolve()
+# ── Path resolution ────────────────────────────────────────────────────────────
+# Supports two layouts:
+#
+#   ROOT MODE  (EXE or script dropped directly at the architectury root):
+#       <root>/VonixBuildMenu.exe      ← this file (frozen) or gui-build-menu.py
+#       <root>/build_menu.py           ← backend, found in same dir
+#       <root>/web/index.html          ← static assets bundled in <exe_dir>/web/
+#
+#   SUBFOLDER MODE  (script inside a "Vonix Build Menu" sub-folder):
+#       <root>/Vonix Build Menu/gui-build-menu.py   ← this file
+#       <root>/build_menu.py                         ← backend, one level up
+#       <root>/Vonix Build Menu/index.html           ← static assets here
+#
+# Detection: if build_menu.py lives in the same directory as this file/exe → root mode.
 
-ROOT_DIR = WEB_DIR.parent
+if getattr(sys, 'frozen', False):
+    _self_dir = Path(sys.executable).parent.resolve()
+else:
+    _self_dir = Path(__file__).parent.resolve()
+
+if (_self_dir / "build_menu.py").exists():
+    # ROOT MODE — exe/script is at the architectury root
+    ROOT_DIR = _self_dir
+    # Static web assets are expected in a "web" sub-folder next to the exe
+    WEB_DIR = _self_dir / "web"
+else:
+    # SUBFOLDER MODE — script is inside a sub-folder (e.g. "Vonix Build Menu/")
+    ROOT_DIR = _self_dir.parent
+    WEB_DIR = _self_dir
 
 # Add root to path so we can import build_menu.py
 if str(ROOT_DIR) not in sys.path:
@@ -22,6 +44,17 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import uvicorn
 import build_menu as bm
+
+# ── Override build_menu's ROOT so it points to the correct architectury root ───
+# build_menu.py sets ROOT from Path(__file__).parent at module import time.
+# In a frozen/EXE context __file__ is meaningless, so we patch it here using
+# ROOT_DIR which was correctly resolved above for both modes.
+bm.ROOT = ROOT_DIR
+bm.LOG_DIR = ROOT_DIR / "build_logs"
+bm.LOG_DIR.mkdir(exist_ok=True)
+# Initial project scan with the correct ROOT
+bm.PROJECTS = bm.scan_projects()
+bm.JAVA_REQUIRED = {p["mc_version"]: p["java_major"] for p in bm.PROJECTS}
 
 app = FastAPI()
 
@@ -276,7 +309,8 @@ if PYQT_AVAILABLE:
             layout.addWidget(self.browser)
 
 def run_server():
-    uvicorn.run("gui-build-menu:app", host="127.0.0.1", port=8000)
+    # Must pass the app object directly (not an import string) so it works when frozen as an EXE
+    uvicorn.run(app, host="127.0.0.1", port=8000)
 
 if __name__ == "__main__":
     print("Starting Vonix Server Utilities Native Web GUI...")
