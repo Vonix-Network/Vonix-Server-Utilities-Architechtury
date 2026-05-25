@@ -1,4 +1,4 @@
-﻿package network.vonix.serverutilities.config;
+package network.vonix.serverutilities.config;
 
 import network.vonix.serverutilities.VonixServerUtilities;
 

@@ -1,4 +1,4 @@
-﻿package network.vonix.serverutilities.fabric;
+package network.vonix.serverutilities.fabric;
 
 import net.fabricmc.api.ModInitializer;
 import network.vonix.serverutilities.VonixServerUtilities;

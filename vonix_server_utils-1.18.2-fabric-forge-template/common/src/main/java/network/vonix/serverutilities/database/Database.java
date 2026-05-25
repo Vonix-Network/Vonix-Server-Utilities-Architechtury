@@ -1,4 +1,4 @@
-﻿package network.vonix.serverutilities.database;
+package network.vonix.serverutilities.database;
 
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.storage.LevelResource;
@@ -148,7 +148,7 @@ public final class Database {
         if (f1.exists()) return f1;
 
         // Alternate: server directory / vonixcore / vonixcore.db
-        File f2 = server.getServerDirectory().resolve("vonixcore/vonixcore.db").toFile();
+        File f2 = server.getServerDirectory().toPath().resolve("vonixcore/vonixcore.db").toFile();
         if (f2.exists()) return f2;
 
         // Fall back: scan for any .db file in the vonixcore subfolder

@@ -1,4 +1,4 @@
-﻿package network.vonix.serverutilities.command;
+package network.vonix.serverutilities.command;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
@@ -113,15 +113,15 @@ public final class WorldCommands {
         switch (type) {
             case "clear" -> {
                 level.setWeatherParameters(duration, 0, false, false);
-                ctx.getSource().sendSuccess(() -> Component.literal("Â§aWeather set to clear."), true);
+                ctx.getSource().sendSuccess(Component.literal("Â§aWeather set to clear."), true);
             }
             case "rain" -> {
                 level.setWeatherParameters(0, duration, true, false);
-                ctx.getSource().sendSuccess(() -> Component.literal("Â§aWeather set to rain."), true);
+                ctx.getSource().sendSuccess(Component.literal("Â§aWeather set to rain."), true);
             }
             case "storm" -> {
                 level.setWeatherParameters(0, duration, true, true);
-                ctx.getSource().sendSuccess(() -> Component.literal("Â§aWeather set to thunderstorm."), true);
+                ctx.getSource().sendSuccess(Component.literal("Â§aWeather set to thunderstorm."), true);
             }
         }
         return 1;
@@ -133,7 +133,7 @@ public final class WorldCommands {
         for (ServerLevel level : ctx.getSource().getServer().getAllLevels()) {
             level.setDayTime(ticks);
         }
-        ctx.getSource().sendSuccess(() -> Component.literal("Â§aTime set to Â§e" + ticks + "Â§a ticks."), true);
+        ctx.getSource().sendSuccess(Component.literal("Â§aTime set to Â§e" + ticks + "Â§a ticks."), true);
         return 1;
     }
 
@@ -141,7 +141,7 @@ public final class WorldCommands {
         for (ServerLevel level : ctx.getSource().getServer().getAllLevels()) {
             level.setDayTime(level.getDayTime() + ticks);
         }
-        ctx.getSource().sendSuccess(() -> Component.literal("Â§aAdded Â§e" + ticks + "Â§a ticks."), true);
+        ctx.getSource().sendSuccess(Component.literal("Â§aAdded Â§e" + ticks + "Â§a ticks."), true);
         return 1;
     }
 
@@ -157,16 +157,16 @@ public final class WorldCommands {
     private static int lightningAtTarget(CommandContext<CommandSourceStack> ctx, ServerPlayer target) {
         spawnLightning(target);
         ctx.getSource().sendSuccess(
-                () -> Component.literal("Â§eStruck Â§6" + target.getName().getString() + "Â§e with lightning!"), true);
+                Component.literal("Â§eStruck Â§6" + target.getName().getString() + "Â§e with lightning!"), true);
         target.sendSystemMessage(Component.literal("Â§cYou were struck by lightning!"));
         return 1;
     }
 
     private static void spawnLightning(ServerPlayer player) {
-        var bolt = EntityType.LIGHTNING_BOLT.create(((net.minecraft.server.level.ServerLevel) player.level()));
+        var bolt = EntityType.LIGHTNING_BOLT.create(((net.minecraft.server.level.ServerLevel) player.level));
         if (bolt != null) {
             bolt.moveTo(player.getX(), player.getY(), player.getZ());
-            ((net.minecraft.server.level.ServerLevel) player.level()).addFreshEntity(bolt);
+            ((net.minecraft.server.level.ServerLevel) player.level).addFreshEntity(bolt);
         }
     }
 
@@ -182,7 +182,7 @@ public final class WorldCommands {
     private static int extinguishTarget(CommandContext<CommandSourceStack> ctx, ServerPlayer target) {
         target.clearFire();
         ctx.getSource().sendSuccess(
-                () -> Component.literal("Â§aExtinguished Â§e" + target.getName().getString()), true);
+                Component.literal("Â§aExtinguished Â§e" + target.getName().getString()), true);
         target.sendSystemMessage(Component.literal("Â§aYou have been extinguished."));
         return 1;
     }

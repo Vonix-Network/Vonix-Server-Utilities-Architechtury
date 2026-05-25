@@ -1,4 +1,4 @@
-﻿package network.vonix.serverutilities.command;
+package network.vonix.serverutilities.command;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;

@@ -89,7 +89,7 @@ public final class UtilityCommands {
     private static int teleportTo(CommandContext<CommandSourceStack> ctx, ServerPlayer target) {
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
         TeleportManager.getInstance().saveLastLocation(player);
-        player.teleportTo(((net.minecraft.server.level.ServerLevel) target.level()), target.getX(), target.getY(), target.getZ(),
+        player.teleportTo(((net.minecraft.server.level.ServerLevel) target.level), target.getX(), target.getY(), target.getZ(),
                 target.getYRot(), target.getXRot());
         player.sendSystemMessage(Component.literal("Â§aTeleported to Â§e" + target.getName().getString()));
         return 1;
@@ -98,9 +98,9 @@ public final class UtilityCommands {
     private static int teleportPlayerTo(CommandContext<CommandSourceStack> ctx,
                                          ServerPlayer target, ServerPlayer dest) {
         TeleportManager.getInstance().saveLastLocation(target);
-        target.teleportTo(((net.minecraft.server.level.ServerLevel) dest.level()), dest.getX(), dest.getY(), dest.getZ(),
+        target.teleportTo(((net.minecraft.server.level.ServerLevel) dest.level), dest.getX(), dest.getY(), dest.getZ(),
                 dest.getYRot(), dest.getXRot());
-        ctx.getSource().sendSuccess(() -> Component.literal(
+        ctx.getSource().sendSuccess(Component.literal(
                 "Â§aTeleported Â§e" + target.getName().getString() + "Â§a to Â§e" + dest.getName().getString()), true);
         target.sendSystemMessage(Component.literal(
                 "Â§aYou were teleported to Â§e" + dest.getName().getString()));
@@ -110,7 +110,7 @@ public final class UtilityCommands {
     private static int teleportHere(CommandContext<CommandSourceStack> ctx, ServerPlayer target) {
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
         TeleportManager.getInstance().saveLastLocation(target);
-        target.teleportTo(((net.minecraft.server.level.ServerLevel) player.level()), player.getX(), player.getY(), player.getZ(),
+        target.teleportTo(((net.minecraft.server.level.ServerLevel) player.level), player.getX(), player.getY(), player.getZ(),
                 player.getYRot(), player.getXRot());
         player.sendSystemMessage(Component.literal(
                 "Â§aTeleported Â§e" + target.getName().getString() + "Â§a to you"));
@@ -125,7 +125,7 @@ public final class UtilityCommands {
         for (ServerPlayer t : player.server.getPlayerList().getPlayers()) {
             if (t != player) {
                 TeleportManager.getInstance().saveLastLocation(t);
-                t.teleportTo(((net.minecraft.server.level.ServerLevel) player.level()), player.getX(), player.getY(), player.getZ(),
+                t.teleportTo(((net.minecraft.server.level.ServerLevel) player.level), player.getX(), player.getY(), player.getZ(),
                         player.getYRot(), player.getXRot());
                 t.sendSystemMessage(Component.literal(
                         "Â§aYou were teleported to Â§e" + player.getName().getString()));
@@ -142,7 +142,7 @@ public final class UtilityCommands {
         double y = DoubleArgumentType.getDouble(ctx, "y");
         double z = DoubleArgumentType.getDouble(ctx, "z");
         TeleportManager.getInstance().saveLastLocation(player);
-        player.teleportTo(((net.minecraft.server.level.ServerLevel) player.level()), x, y, z, player.getYRot(), player.getXRot());
+        player.teleportTo(((net.minecraft.server.level.ServerLevel) player.level), x, y, z, player.getYRot(), player.getXRot());
         player.sendSystemMessage(Component.literal(
                 String.format("Â§aTeleported to Â§e%.1f, %.1f, %.1f", x, y, z)));
         return 1;
@@ -151,7 +151,7 @@ public final class UtilityCommands {
     private static int setSpawn(CommandContext<CommandSourceStack> ctx) {
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
         BlockPos pos = player.blockPosition();
-        ((net.minecraft.server.level.ServerLevel) player.level()).setDefaultSpawnPos(pos, 0);
+        ((net.minecraft.server.level.ServerLevel) player.level).setDefaultSpawnPos(pos, 0);
         player.sendSystemMessage(Component.literal(
                 String.format("Â§aSpawn set to Â§e%d, %d, %d", pos.getX(), pos.getY(), pos.getZ())));
         return 1;
@@ -218,11 +218,11 @@ public final class UtilityCommands {
     private static int showSeen(CommandContext<CommandSourceStack> ctx, String playerName) {
         if (ctx.getSource().getServer().getPlayerList().getPlayerByName(playerName) != null) {
             ctx.getSource().sendSuccess(
-                    () -> Component.literal("Â§e" + playerName + " Â§7is currently Â§aonline"), false);
+                    Component.literal("Â§e" + playerName + " Â§7is currently Â§aonline"), false);
         } else {
             Long ts = lastSeen.values().stream().findFirst().orElse(null); // placeholder
             ctx.getSource().sendSuccess(
-                    () -> Component.literal("Â§e" + playerName + " Â§7is Â§coffline"), false);
+                    Component.literal("Â§e" + playerName + " Â§7is Â§coffline"), false);
         }
         return 1;
     }
@@ -230,26 +230,26 @@ public final class UtilityCommands {
     private static int showWhois(CommandContext<CommandSourceStack> ctx, ServerPlayer target) {
         String name    = target.getName().getString();
         String display = nicknames.getOrDefault(target.getUUID(), name);
-        int ping       = target.connection.latency();
+        int ping       = target.latency;
         BlockPos pos   = target.blockPosition();
-        String dim     = target.level().dimension().location().toString();
+        String dim     = target.level.dimension().location().toString();
 
-        ctx.getSource().sendSuccess(() -> Component.literal("Â§6=== Â§e" + name + " Â§6==="), false);
-        ctx.getSource().sendSuccess(() -> Component.literal("Â§7Display: " + display), false);
-        ctx.getSource().sendSuccess(() -> Component.literal("Â§7UUID: Â§f" + target.getUUID()), false);
-        ctx.getSource().sendSuccess(() -> Component.literal("Â§7Ping: Â§f" + ping + "ms"), false);
-        ctx.getSource().sendSuccess(() -> Component.literal(
+        ctx.getSource().sendSuccess(Component.literal("Â§6=== Â§e" + name + " Â§6==="), false);
+        ctx.getSource().sendSuccess(Component.literal("Â§7Display: " + display), false);
+        ctx.getSource().sendSuccess(Component.literal("Â§7UUID: Â§f" + target.getUUID()), false);
+        ctx.getSource().sendSuccess(Component.literal("Â§7Ping: Â§f" + ping + "ms"), false);
+        ctx.getSource().sendSuccess(Component.literal(
                 String.format("Â§7Location: Â§f%d, %d, %d Â§7in Â§f%s", pos.getX(), pos.getY(), pos.getZ(), dim)), false);
-        ctx.getSource().sendSuccess(() -> Component.literal(
+        ctx.getSource().sendSuccess(Component.literal(
                 "Â§7Health: Â§c" + (int) target.getHealth() + "Â§7/Â§c" + (int) target.getMaxHealth()), false);
-        ctx.getSource().sendSuccess(() -> Component.literal(
+        ctx.getSource().sendSuccess(Component.literal(
                 "Â§7Food: Â§e" + target.getFoodData().getFoodLevel() + "Â§7/Â§e20"), false);
         return 1;
     }
 
     private static int showPing(CommandContext<CommandSourceStack> ctx) {
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
-        int ping  = player.connection.latency();
+        int ping  = player.latency;
         String col = ping < 50 ? "Â§a" : ping < 150 ? "Â§e" : "Â§c";
         player.sendSystemMessage(Component.literal("Â§7Your ping: " + col + ping + "ms"));
         return 1;
@@ -259,7 +259,7 @@ public final class UtilityCommands {
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
         List<String> nearby = new ArrayList<>();
         for (ServerPlayer other : player.server.getPlayerList().getPlayers()) {
-            if (other != player && other.level() == player.level()) {
+            if (other != player && other.level == player.level) {
                 double dist = player.distanceTo(other);
                 if (dist <= radius) nearby.add(String.format("Â§e%s Â§7(%.0fm)", other.getName().getString(), dist));
             }
@@ -299,7 +299,7 @@ public final class UtilityCommands {
         var players = ctx.getSource().getServer().getPlayerList().getPlayers();
         int max     = ctx.getSource().getServer().getMaxPlayers();
         ctx.getSource().sendSuccess(
-                () -> Component.literal("Â§6Players Online: Â§e" + players.size() + "/" + max), false);
+                Component.literal("Â§6Players Online: Â§e" + players.size() + "/" + max), false);
         StringBuilder sb = new StringBuilder();
         for (ServerPlayer p : players) {
             if (!sb.isEmpty()) sb.append("Â§7, ");
@@ -307,7 +307,7 @@ public final class UtilityCommands {
             sb.append(nick != null ? nick : "Â§e" + p.getName().getString());
         }
         String list = sb.toString();
-        ctx.getSource().sendSuccess(() -> Component.literal(list), false);
+        ctx.getSource().sendSuccess(Component.literal(list), false);
         return 1;
     }
 
@@ -508,14 +508,14 @@ public final class UtilityCommands {
         long used   = (rt.totalMemory() - rt.freeMemory()) / 1024 / 1024;
         long max    = rt.maxMemory() / 1024 / 1024;
         System.gc();
-        ctx.getSource().sendSuccess(() -> Component.literal("Â§6=== Server Stats ==="), false);
-        ctx.getSource().sendSuccess(() -> Component.literal("Â§7Memory: Â§e" + used + "MB Â§7/ Â§e" + max + "MB"), false);
-        ctx.getSource().sendSuccess(() -> Component.literal("Â§7Threads: Â§e" + Thread.activeCount()), false);
+        ctx.getSource().sendSuccess(Component.literal("Â§6=== Server Stats ==="), false);
+        ctx.getSource().sendSuccess(Component.literal("Â§7Memory: Â§e" + used + "MB Â§7/ Â§e" + max + "MB"), false);
+        ctx.getSource().sendSuccess(Component.literal("Â§7Threads: Â§e" + Thread.activeCount()), false);
         return 1;
     }
 
     private static int showLag(CommandContext<CommandSourceStack> ctx) {
-        ctx.getSource().sendSuccess(() -> Component.literal("Â§7TPS: Â§acheck F3 for debug info"), false);
+        ctx.getSource().sendSuccess(Component.literal("Â§7TPS: Â§acheck F3 for debug info"), false);
         return 1;
     }
 
@@ -620,7 +620,7 @@ public final class UtilityCommands {
         player.openMenu(new net.minecraft.world.SimpleMenuProvider(
                 (id, inv, p) -> new net.minecraft.world.inventory.CraftingMenu(id, inv,
                         net.minecraft.world.inventory.ContainerLevelAccess.create(
-                                player.level(), player.blockPosition())),
+                                player.level, player.blockPosition())),
                 Component.literal("Crafting")));
         return 1;
     }
@@ -630,7 +630,7 @@ public final class UtilityCommands {
         player.openMenu(new net.minecraft.world.SimpleMenuProvider(
                 (id, inv, p) -> new net.minecraft.world.inventory.AnvilMenu(id, inv,
                         net.minecraft.world.inventory.ContainerLevelAccess.create(
-                                player.level(), player.blockPosition())),
+                                player.level, player.blockPosition())),
                 Component.literal("Anvil")));
         return 1;
     }

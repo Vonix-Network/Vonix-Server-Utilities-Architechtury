@@ -1,4 +1,4 @@
-﻿package network.vonix.serverutilities;
+package network.vonix.serverutilities;
 
 import network.vonix.serverutilities.database.Database;
 import network.vonix.serverutilities.listener.EventHandler;

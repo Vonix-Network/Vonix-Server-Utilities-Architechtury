@@ -1,4 +1,4 @@
-﻿package network.vonix.serverutilities.command;
+package network.vonix.serverutilities.command;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -105,7 +105,7 @@ public final class ModCommands {
 
         // Capture player state on the main thread before going async
         UUID uuid    = player.getUUID();
-        String world = player.level().dimension().location().toString();
+        String world = player.level.dimension().location().toString();
         double x = player.getX(), y = player.getY(), z = player.getZ();
         float yaw = player.getYRot(), pitch = player.getXRot();
         int maxHomes = ModConfig.INSTANCE.getMaxHomes();
@@ -317,7 +317,7 @@ public final class ModCommands {
         MinecraftServer server = ctx.getSource().getServer();
 
         UUID uuid    = player.getUUID();
-        String world = player.level().dimension().location().toString();
+        String world = player.level.dimension().location().toString();
         double x = player.getX(), y = player.getY(), z = player.getZ();
         float yaw = player.getYRot(), pitch = player.getXRot();
 
@@ -325,7 +325,7 @@ public final class ModCommands {
             boolean ok = WarpManager.getInstance().setWarp(name, uuid, world, x, y, z, yaw, pitch);
             server.execute(() -> {
                 if (ok) ctx.getSource().sendSuccess(
-                        () -> Component.literal("Â§a[VSU] Warp '" + name + "' created."), true);
+                        Component.literal("Â§a[VSU] Warp '" + name + "' created."), true);
             });
         });
         return 1;
@@ -364,7 +364,7 @@ public final class ModCommands {
             boolean ok = WarpManager.getInstance().deleteWarp(name);
             server.execute(() -> {
                 if (ok) ctx.getSource().sendSuccess(
-                        () -> Component.literal("Â§a[VSU] Warp '" + name + "' deleted."), true);
+                        Component.literal("Â§a[VSU] Warp '" + name + "' deleted."), true);
                 else ctx.getSource().sendFailure(
                         Component.literal("Â§c[VSU] Warp '" + name + "' not found."));
             });
@@ -379,9 +379,9 @@ public final class ModCommands {
             var warps = WarpManager.getInstance().getWarps();
             server.execute(() -> {
                 if (warps.isEmpty()) {
-                    ctx.getSource().sendSuccess(() -> Component.literal("Â§7[VSU] No warps available."), false);
+                    ctx.getSource().sendSuccess(Component.literal("Â§7[VSU] No warps available."), false);
                 } else {
-                    ctx.getSource().sendSuccess(() -> Component.literal(
+                    ctx.getSource().sendSuccess(Component.literal(
                             "Â§6[VSU] Warps: Â§e" + String.join(", ",
                                     warps.stream().map(WarpManager.Warp::name).toList())), false);
                 }
@@ -433,10 +433,10 @@ public final class ModCommands {
     private static int listKits(CommandContext<CommandSourceStack> ctx) {
         var kits = KitManager.getInstance().getKitNames();
         if (kits.isEmpty()) {
-            ctx.getSource().sendSuccess(() -> Component.literal("Â§7[VSU] No kits available."), false);
+            ctx.getSource().sendSuccess(Component.literal("Â§7[VSU] No kits available."), false);
         } else {
             ctx.getSource().sendSuccess(
-                    () -> Component.literal("Â§6[VSU] Kits: Â§e" + String.join(", ", kits)), false);
+                    Component.literal("Â§6[VSU] Kits: Â§e" + String.join(", ", kits)), false);
         }
         return 1;
     }
@@ -458,7 +458,7 @@ public final class ModCommands {
                             ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
                             AdminManager.getInstance().healPlayer(target);
                             ctx.getSource().sendSuccess(
-                                    () -> Component.literal("Â§a[VSU] Healed Â§e" + target.getName().getString()), true);
+                                    Component.literal("Â§a[VSU] Healed Â§e" + target.getName().getString()), true);
                             return 1;
                         })));
 
@@ -474,7 +474,7 @@ public final class ModCommands {
                             ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
                             AdminManager.getInstance().feedPlayer(target);
                             ctx.getSource().sendSuccess(
-                                    () -> Component.literal("Â§a[VSU] Fed Â§e" + target.getName().getString()), true);
+                                    Component.literal("Â§a[VSU] Fed Â§e" + target.getName().getString()), true);
                             return 1;
                         })));
 
@@ -561,9 +561,9 @@ public final class ModCommands {
 
     private static int showVersion(CommandContext<CommandSourceStack> ctx) {
         ctx.getSource().sendSuccess(
-                () -> Component.literal("Â§6[VSU] Â§fVersion: Â§e" + VonixServerUtilities.VERSION), false);
+                Component.literal("Â§6[VSU] Â§fVersion: Â§e" + VonixServerUtilities.VERSION), false);
         ctx.getSource().sendSuccess(
-                () -> Component.literal("Â§7Platform: Architectury 1.19.2"), false);
+                Component.literal("Â§7Platform: Architectury 1.19.2"), false);
         return 1;
     }
 
@@ -571,23 +571,23 @@ public final class ModCommands {
         int players = ctx.getSource().getServer().getPlayerList().getPlayerCount();
         int max     = ctx.getSource().getServer().getMaxPlayers();
         ctx.getSource().sendSuccess(
-                () -> Component.literal("Â§6[VSU] Â§fStatus: Â§aOnline Â§7(" + players + "/" + max + ")"), false);
+                Component.literal("Â§6[VSU] Â§fStatus: Â§aOnline Â§7(" + players + "/" + max + ")"), false);
         ctx.getSource().sendSuccess(
-                () -> Component.literal("Â§7Modules: homes, warps, kits, TPA, back, admin, world"), false);
+                Component.literal("Â§7Modules: homes, warps, kits, TPA, back, admin, world"), false);
         return 1;
     }
 
     private static int reloadConfig(CommandContext<CommandSourceStack> ctx) {
         ctx.getSource().sendSuccess(
-                () -> Component.literal("Â§e[VSU] Config reloads require a server restart."), true);
+                Component.literal("Â§e[VSU] Config reloads require a server restart."), true);
         return 1;
     }
 
     private static int showHelp(CommandContext<CommandSourceStack> ctx) {
-        ctx.getSource().sendSuccess(() -> Component.literal("Â§6Â§l=== Vonix Server Utilities ==="), false);
-        ctx.getSource().sendSuccess(() -> Component.literal("Â§e/vonixsu version Â§7â€” show version"), false);
-        ctx.getSource().sendSuccess(() -> Component.literal("Â§e/vonixsu status  Â§7â€” show server status"), false);
-        ctx.getSource().sendSuccess(() -> Component.literal("Â§e/vonixsu reload  Â§7â€” reload info"), false);
+        ctx.getSource().sendSuccess(Component.literal("Â§6Â§l=== Vonix Server Utilities ==="), false);
+        ctx.getSource().sendSuccess(Component.literal("Â§e/vonixsu version Â§7â€” show version"), false);
+        ctx.getSource().sendSuccess(Component.literal("Â§e/vonixsu status  Â§7â€” show server status"), false);
+        ctx.getSource().sendSuccess(Component.literal("Â§e/vonixsu reload  Â§7â€” reload info"), false);
         return 1;
     }
 }

@@ -1,4 +1,4 @@
-﻿package network.vonix.serverutilities.teleport;
+package network.vonix.serverutilities.teleport;
 
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
@@ -47,7 +47,7 @@ public final class TeleportManager {
 
     private static Location snapshot(ServerPlayer p) {
         return new Location(
-                p.level().dimension().location().toString(),
+                p.level.dimension().location().toString(),
                 p.getX(), p.getY(), p.getZ(),
                 p.getYRot(), p.getXRot(),
                 System.currentTimeMillis());
@@ -98,14 +98,14 @@ public final class TeleportManager {
 
         if (req.tpaHere()) {
             // Requester asked target to come to them
-            teleportPlayer(target, (ServerLevel) requester.level(),
+            teleportPlayer(target, (ServerLevel) requester.level,
                     requester.getX(), requester.getY(), requester.getZ(),
                     requester.getYRot(), requester.getXRot());
             requester.sendSystemMessage(Component.literal(
                     "Â§a[VSU] " + target.getName().getString() + " teleported to you."));
         } else {
             // Requester asked to go to target
-            teleportPlayer(requester, (ServerLevel) target.level(),
+            teleportPlayer(requester, (ServerLevel) target.level,
                     target.getX(), target.getY(), target.getZ(),
                     target.getYRot(), target.getXRot());
             requester.sendSystemMessage(Component.literal(

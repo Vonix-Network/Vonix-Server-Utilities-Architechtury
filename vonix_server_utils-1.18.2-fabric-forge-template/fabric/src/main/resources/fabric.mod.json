@@ -1,4 +1,4 @@
-﻿{
+{
   "schemaVersion": 1,
   "id": "vonix_server_utilities",
   "version": "${version}",
@@ -17,8 +17,8 @@
   "entrypoints": {
     "main": [
       "network.vonix.serverutilities.fabric.VonixServerUtilitiesFabric"
-    ],
-    },
+    ]
+  },
   "mixins": [
     "vonix_server_utils.mixins.json"
   ],

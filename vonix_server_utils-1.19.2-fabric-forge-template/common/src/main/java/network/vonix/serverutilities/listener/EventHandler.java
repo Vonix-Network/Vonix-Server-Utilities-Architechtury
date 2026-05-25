@@ -1,4 +1,4 @@
-﻿package network.vonix.serverutilities.listener;
+package network.vonix.serverutilities.listener;
 
 import dev.architectury.event.EventResult;
 import dev.architectury.event.events.common.CommandRegistrationEvent;
@@ -23,7 +23,7 @@ public final class EventHandler {
     public static void init() {
 
         // â”€â”€ Commands â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-        CommandRegistrationEvent.EVENT.register((dispatcher, dedicated) -> {
+        CommandRegistrationEvent.EVENT.register((dispatcher, registry, selection) -> {
             ModCommands.register(dispatcher);
             UtilityCommands.register(dispatcher);
             WorldCommands.register(dispatcher);
@@ -32,7 +32,7 @@ public final class EventHandler {
 
         // â”€â”€ Server starting â€” load config & open DB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         LifecycleEvent.SERVER_STARTING.register(server -> {
-            ModConfig.INSTANCE.load(server.getServerDirectory().resolve("config"));
+            ModConfig.INSTANCE.load(server.getServerDirectory().toPath().resolve("config"));
             // Pass server so the DB can locate the VonixCore DB for migration
             VonixServerUtilities.getInstance().getDatabase().init(server);
         });

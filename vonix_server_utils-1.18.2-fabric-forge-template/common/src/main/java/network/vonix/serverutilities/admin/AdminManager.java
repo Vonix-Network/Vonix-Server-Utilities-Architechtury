@@ -1,4 +1,4 @@
-﻿package network.vonix.serverutilities.admin;
+package network.vonix.serverutilities.admin;
 
 import net.minecraft.network.chat.Component;
 
@@ -36,7 +36,7 @@ public final class AdminManager {
                             ClientboundPlayerInfoPacket.Action.ADD_PLAYER, player));
                 }
             }
-            player.sendSystemMessage(Component.literal("Â§a[VSU] You are now visible."));
+            player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§a[VSU] You are now visible."), net.minecraft.Util.NIL_UUID);
         } else {
             vanishedPlayers.add(uuid);
             // Hide from non-operators
@@ -46,7 +46,7 @@ public final class AdminManager {
                             ClientboundPlayerInfoPacket.Action.REMOVE_PLAYER, player));
                 }
             }
-            player.sendSystemMessage(Component.literal("Â§a[VSU] You are now vanished."));
+            player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§a[VSU] You are now vanished."), net.minecraft.Util.NIL_UUID);
         }
     }
 
@@ -58,11 +58,11 @@ public final class AdminManager {
         UUID uuid = player.getUUID();
         if (godModePlayers.remove(uuid)) {
             player.setInvulnerable(false);
-            player.sendSystemMessage(Component.literal("Â§c[VSU] God mode disabled."));
+            player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§c[VSU] God mode disabled."), net.minecraft.Util.NIL_UUID);
         } else {
             godModePlayers.add(uuid);
             player.setInvulnerable(true);
-            player.sendSystemMessage(Component.literal("Â§a[VSU] God mode enabled."));
+            player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§a[VSU] God mode enabled."), net.minecraft.Util.NIL_UUID);
         }
     }
 
@@ -76,12 +76,12 @@ public final class AdminManager {
             player.getAbilities().mayfly = player.gameMode.getGameModeForPlayer() == GameType.CREATIVE;
             player.getAbilities().flying = false;
             player.onUpdateAbilities();
-            player.sendSystemMessage(Component.literal("Â§c[VSU] Fly mode disabled."));
+            player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§c[VSU] Fly mode disabled."), net.minecraft.Util.NIL_UUID);
         } else {
             flyingPlayers.add(uuid);
             player.getAbilities().mayfly = true;
             player.onUpdateAbilities();
-            player.sendSystemMessage(Component.literal("Â§a[VSU] Fly mode enabled."));
+            player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§a[VSU] Fly mode enabled."), net.minecraft.Util.NIL_UUID);
         }
     }
 
@@ -91,13 +91,13 @@ public final class AdminManager {
         player.setHealth(player.getMaxHealth());
         player.removeAllEffects();
         player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 100, 1));
-        player.sendSystemMessage(Component.literal("Â§a[VSU] You have been healed."));
+        player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§a[VSU] You have been healed."), net.minecraft.Util.NIL_UUID);
     }
 
     public void feedPlayer(ServerPlayer player) {
         player.getFoodData().setFoodLevel(20);
         player.getFoodData().setSaturation(20.0f);
-        player.sendSystemMessage(Component.literal("Â§a[VSU] You have been fed."));
+        player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§a[VSU] You have been fed."), net.minecraft.Util.NIL_UUID);
     }
 
     // â”€â”€ Lifecycle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

@@ -230,7 +230,7 @@ public final class UtilityCommands {
     private static int showWhois(CommandContext<CommandSourceStack> ctx, ServerPlayer target) {
         String name    = target.getName().getString();
         String display = nicknames.getOrDefault(target.getUUID(), name);
-        int ping       = target.connection.latency();
+        int ping       = target.latency;
         BlockPos pos   = target.blockPosition();
         String dim     = target.level().dimension().location().toString();
 
@@ -249,7 +249,7 @@ public final class UtilityCommands {
 
     private static int showPing(CommandContext<CommandSourceStack> ctx) {
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
-        int ping  = player.connection.latency();
+        int ping  = player.latency;
         String col = ping < 50 ? "Â§a" : ping < 150 ? "Â§e" : "Â§c";
         player.sendSystemMessage(Component.literal("Â§7Your ping: " + col + ping + "ms"));
         return 1;

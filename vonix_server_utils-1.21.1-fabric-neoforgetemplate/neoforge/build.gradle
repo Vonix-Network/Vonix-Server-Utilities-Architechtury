@@ -44,7 +44,7 @@ dependencies {
     // Bundle SQLite (no relocation needed — native lib loads by class name)
     shadowBundle 'org.xerial:sqlite-jdbc:3.45.1.0'
 
-    compileOnly "top.theillusivec4.curios:curios-neoforge:9.0.5+1.21:api"
+    compileOnly "top.theillusivec4.curios:curios-neoforge:9.5.1+1.21.1:api"
 }
 
 processResources {

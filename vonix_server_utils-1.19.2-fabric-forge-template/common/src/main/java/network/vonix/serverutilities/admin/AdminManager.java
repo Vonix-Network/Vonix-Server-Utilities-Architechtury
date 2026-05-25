@@ -1,4 +1,4 @@
-﻿package network.vonix.serverutilities.admin;
+package network.vonix.serverutilities.admin;
 
 import net.minecraft.network.chat.Component;
 

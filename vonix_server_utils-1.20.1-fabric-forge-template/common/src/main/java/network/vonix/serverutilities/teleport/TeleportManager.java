@@ -1,4 +1,4 @@
-﻿package network.vonix.serverutilities.teleport;
+package network.vonix.serverutilities.teleport;
 
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;

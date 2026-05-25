@@ -1,4 +1,4 @@
-﻿package network.vonix.serverutilities.homes;
+package network.vonix.serverutilities.homes;
 
 import net.minecraft.server.level.ServerPlayer;
 import network.vonix.serverutilities.VonixServerUtilities;
@@ -60,7 +60,7 @@ public final class HomeManager {
     public boolean setHome(ServerPlayer player, String name) {
         return setHome(
                 player.getUUID(), name,
-                player.level().dimension().location().toString(),
+                player.level.dimension().location().toString(),
                 player.getX(), player.getY(), player.getZ(),
                 player.getYRot(), player.getXRot());
     }

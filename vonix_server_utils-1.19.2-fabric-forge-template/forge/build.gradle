@@ -37,7 +37,7 @@ dependencies {
     common(project(path: ':common', configuration: 'namedElements')) { transitive = false }
     shadowBundle project(path: ':common', configuration: 'transformProductionForge')
     shadowBundle 'org.xerial:sqlite-jdbc:3.45.1.0'
-    compileOnly "top.theillusivec4.curios:curios-forge:5.1.4.1+1.19.2:api"
+    compileOnly "top.theillusivec4.curios:curios-forge:1.19.2-5.1.4.1:api"
 }
 
 processResources {

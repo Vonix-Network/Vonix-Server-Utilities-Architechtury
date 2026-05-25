@@ -1,4 +1,4 @@
-﻿package network.vonix.serverutilities.command;
+package network.vonix.serverutilities.command;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -72,8 +72,7 @@ public final class ModCommands {
     }
 
     private static int goHome(CommandContext<CommandSourceStack> ctx, String name) {
-        ServerPlayer player = ctx.getSource().getPlayer();
-        if (player == null) return 0;
+        if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
         MinecraftServer server = ctx.getSource().getServer();
         UUID uuid = player.getUUID();
 
@@ -81,31 +80,30 @@ public final class ModCommands {
             HomeManager.Home home = HomeManager.getInstance().getHome(uuid, name);
             server.execute(() -> {
                 if (home == null) {
-                    player.sendSystemMessage(Component.literal("Â§c[VSU] Home '" + name + "' not found."));
+                    player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§c[VSU] Home '" + name + "' not found."), net.minecraft.Util.NIL_UUID);
                     return;
                 }
                 for (ServerLevel level : server.getAllLevels()) {
                     if (level.dimension().location().toString().equals(home.world())) {
                         TeleportManager.getInstance().teleportPlayer(
                                 player, level, home.x(), home.y(), home.z(), home.yaw(), home.pitch());
-                        player.sendSystemMessage(Component.literal("Â§a[VSU] Teleported to home '" + name + "'."));
+                        player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§a[VSU] Teleported to home '" + name + "'."), net.minecraft.Util.NIL_UUID);
                         return;
                     }
                 }
-                player.sendSystemMessage(Component.literal("Â§c[VSU] Home world is unavailable."));
+                player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§c[VSU] Home world is unavailable."), net.minecraft.Util.NIL_UUID);
             });
         });
         return 1;
     }
 
     private static int setHome(CommandContext<CommandSourceStack> ctx, String name) {
-        ServerPlayer player = ctx.getSource().getPlayer();
-        if (player == null) return 0;
+        if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
         MinecraftServer server = ctx.getSource().getServer();
 
         // Capture player state on the main thread before going async
         UUID uuid    = player.getUUID();
-        String world = player.level().dimension().location().toString();
+        String world = player.level.dimension().location().toString();
         double x = player.getX(), y = player.getY(), z = player.getZ();
         float yaw = player.getYRot(), pitch = player.getXRot();
         int maxHomes = ModConfig.INSTANCE.getMaxHomes();
@@ -113,33 +111,31 @@ public final class ModCommands {
         VonixServerUtilities.dbAsync(() -> {
             boolean ok = HomeManager.getInstance().setHome(uuid, name, world, x, y, z, yaw, pitch);
             server.execute(() -> {
-                if (ok) player.sendSystemMessage(Component.literal("Â§a[VSU] Home '" + name + "' set."));
-                else    player.sendSystemMessage(Component.literal(
-                        "Â§c[VSU] Home limit reached (" + maxHomes + ")."));
+                if (ok) player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§a[VSU] Home '" + name + "' set."), net.minecraft.Util.NIL_UUID);
+                else    player.sendMessage(new net.minecraft.network.chat.TextComponent(
+                        "Â§c[VSU] Home limit reached (" + maxHomes + ")."), net.minecraft.Util.NIL_UUID);
             });
         });
         return 1;
     }
 
     private static int delHome(CommandContext<CommandSourceStack> ctx, String name) {
-        ServerPlayer player = ctx.getSource().getPlayer();
-        if (player == null) return 0;
+        if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
         MinecraftServer server = ctx.getSource().getServer();
         UUID uuid = player.getUUID();
 
         VonixServerUtilities.dbAsync(() -> {
             boolean ok = HomeManager.getInstance().deleteHome(uuid, name);
             server.execute(() -> {
-                if (ok) player.sendSystemMessage(Component.literal("Â§a[VSU] Home '" + name + "' deleted."));
-                else    player.sendSystemMessage(Component.literal("Â§c[VSU] Home '" + name + "' not found."));
+                if (ok) player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§a[VSU] Home '" + name + "' deleted."), net.minecraft.Util.NIL_UUID);
+                else    player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§c[VSU] Home '" + name + "' not found."), net.minecraft.Util.NIL_UUID);
             });
         });
         return 1;
     }
 
     private static int listHomes(CommandContext<CommandSourceStack> ctx) {
-        ServerPlayer player = ctx.getSource().getPlayer();
-        if (player == null) return 0;
+        if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
         MinecraftServer server = ctx.getSource().getServer();
         UUID uuid = player.getUUID();
         int maxHomes = ModConfig.INSTANCE.getMaxHomes();
@@ -148,11 +144,11 @@ public final class ModCommands {
             var homes = HomeManager.getInstance().getHomes(uuid);
             server.execute(() -> {
                 if (homes.isEmpty()) {
-                    player.sendSystemMessage(Component.literal("Â§7[VSU] You have no homes set."));
+                    player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§7[VSU] You have no homes set."), net.minecraft.Util.NIL_UUID);
                 } else {
-                    player.sendSystemMessage(Component.literal(
+                    player.sendMessage(new net.minecraft.network.chat.TextComponent(
                             "Â§6[VSU] Your homes Â§7(" + homes.size() + "/" + maxHomes + "): Â§e"
-                            + String.join(", ", homes.stream().map(HomeManager.Home::name).toList())));
+                            + String.join(", ", homes.stream().map(HomeManager.Home::name).toList())), net.minecraft.Util.NIL_UUID);
                 }
             });
         });
@@ -178,56 +174,53 @@ public final class ModCommands {
 
     private static int sendTpa(CommandContext<CommandSourceStack> ctx, boolean tpaHere)
             throws CommandSyntaxException {
-        ServerPlayer player = ctx.getSource().getPlayer();
-        if (player == null) return 0;
+        if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
         ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
 
         if (player.getUUID().equals(target.getUUID())) {
-            player.sendSystemMessage(Component.literal("Â§c[VSU] You cannot TPA to yourself."));
+            player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§c[VSU] You cannot TPA to yourself."), net.minecraft.Util.NIL_UUID);
             return 0;
         }
         if (!TeleportManager.getInstance().sendTpaRequest(player, target, tpaHere)) {
-            player.sendSystemMessage(Component.literal(
-                    "Â§c[VSU] " + target.getName().getString() + " already has a pending request."));
+            player.sendMessage(new net.minecraft.network.chat.TextComponent(
+                    "Â§c[VSU] " + target.getName().getString() + " already has a pending request."), net.minecraft.Util.NIL_UUID);
             return 0;
         }
         if (tpaHere) {
-            player.sendSystemMessage(Component.literal(
-                    "Â§a[VSU] Requested " + target.getName().getString() + " to teleport to you."));
-            target.sendSystemMessage(Component.literal(
+            player.sendMessage(new net.minecraft.network.chat.TextComponent(
+                    "Â§a[VSU] Requested " + target.getName().getString() + " to teleport to you."), net.minecraft.Util.NIL_UUID);
+            target.sendMessage(new net.minecraft.network.chat.TextComponent(
                     "Â§e[VSU] " + player.getName().getString()
-                    + " wants you to teleport to them. Use Â§6/tpaccept Â§eor Â§6/tpdenyÂ§e."));
+                    + " wants you to teleport to them. Use Â§6/tpaccept Â§eor Â§6/tpdenyÂ§e."), net.minecraft.Util.NIL_UUID);
         } else {
-            player.sendSystemMessage(Component.literal(
-                    "Â§a[VSU] Sent teleport request to " + target.getName().getString() + "."));
-            target.sendSystemMessage(Component.literal(
+            player.sendMessage(new net.minecraft.network.chat.TextComponent(
+                    "Â§a[VSU] Sent teleport request to " + target.getName().getString() + "."), net.minecraft.Util.NIL_UUID);
+            target.sendMessage(new net.minecraft.network.chat.TextComponent(
                     "Â§e[VSU] " + player.getName().getString()
-                    + " wants to teleport to you. Use Â§6/tpaccept Â§eor Â§6/tpdenyÂ§e."));
+                    + " wants to teleport to you. Use Â§6/tpaccept Â§eor Â§6/tpdenyÂ§e."), net.minecraft.Util.NIL_UUID);
         }
         return 1;
     }
 
     private static int tpAccept(CommandContext<CommandSourceStack> ctx) {
-        ServerPlayer player = ctx.getSource().getPlayer();
-        if (player == null) return 0;
+        if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
 
         if (TeleportManager.getInstance().acceptTpaRequest(player, ctx.getSource().getServer())) {
-            player.sendSystemMessage(Component.literal("Â§a[VSU] Teleport accepted."));
+            player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§a[VSU] Teleport accepted."), net.minecraft.Util.NIL_UUID);
             return 1;
         }
-        player.sendSystemMessage(Component.literal("Â§c[VSU] No pending teleport request."));
+        player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§c[VSU] No pending teleport request."), net.minecraft.Util.NIL_UUID);
         return 0;
     }
 
     private static int tpDeny(CommandContext<CommandSourceStack> ctx) {
-        ServerPlayer player = ctx.getSource().getPlayer();
-        if (player == null) return 0;
+        if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
 
         if (TeleportManager.getInstance().denyTpaRequest(player, ctx.getSource().getServer())) {
-            player.sendSystemMessage(Component.literal("Â§c[VSU] Teleport request denied."));
+            player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§c[VSU] Teleport request denied."), net.minecraft.Util.NIL_UUID);
             return 1;
         }
-        player.sendSystemMessage(Component.literal("Â§c[VSU] No pending teleport request."));
+        player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§c[VSU] No pending teleport request."), net.minecraft.Util.NIL_UUID);
         return 0;
     }
 
@@ -241,33 +234,31 @@ public final class ModCommands {
     }
 
     private static int back(CommandContext<CommandSourceStack> ctx) {
-        ServerPlayer player = ctx.getSource().getPlayer();
-        if (player == null) return 0;
+        if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
 
         TeleportManager.Location loc = TeleportManager.getInstance().getLastLocation(player.getUUID());
         if (loc == null) {
-            player.sendSystemMessage(Component.literal("Â§c[VSU] No previous location to return to."));
+            player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§c[VSU] No previous location to return to."), net.minecraft.Util.NIL_UUID);
             return 0;
         }
         return doBack(ctx, player, loc, "Â§a[VSU] Returned to your previous location.");
     }
 
     private static int backDeath(CommandContext<CommandSourceStack> ctx) {
-        ServerPlayer player = ctx.getSource().getPlayer();
-        if (player == null) return 0;
+        if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
 
         TeleportManager.Location loc = TeleportManager.getInstance().getDeathLocation(player.getUUID());
         if (loc == null) {
-            player.sendSystemMessage(Component.literal("Â§c[VSU] No death location on record."));
+            player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§c[VSU] No death location on record."), net.minecraft.Util.NIL_UUID);
             return 0;
         }
         int delay = ModConfig.INSTANCE.getDeathBackDelaySeconds();
         if (delay > 0) {
             long elapsed = (System.currentTimeMillis() - loc.timestamp()) / 1000L;
             if (elapsed < delay) {
-                player.sendSystemMessage(Component.literal(
+                player.sendMessage(new net.minecraft.network.chat.TextComponent(
                         "Â§c[VSU] Wait Â§e" + formatTime((int) (delay - elapsed))
-                        + " Â§cbefore returning to your death location."));
+                        + " Â§cbefore returning to your death location."), net.minecraft.Util.NIL_UUID);
                 return 0;
             }
         }
@@ -280,11 +271,11 @@ public final class ModCommands {
             if (level.dimension().location().toString().equals(loc.world())) {
                 TeleportManager.getInstance().teleportPlayer(
                         player, level, loc.x(), loc.y(), loc.z(), loc.yaw(), loc.pitch());
-                player.sendSystemMessage(Component.literal(msg));
+                player.sendMessage(new net.minecraft.network.chat.TextComponent(msg), net.minecraft.Util.NIL_UUID);
                 return 1;
             }
         }
-        player.sendSystemMessage(Component.literal("Â§c[VSU] That world is no longer available."));
+        player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§c[VSU] That world is no longer available."), net.minecraft.Util.NIL_UUID);
         return 0;
     }
 
@@ -312,12 +303,11 @@ public final class ModCommands {
     }
 
     private static int setWarp(CommandContext<CommandSourceStack> ctx, String name) {
-        ServerPlayer player = ctx.getSource().getPlayer();
-        if (player == null) return 0;
+        if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
         MinecraftServer server = ctx.getSource().getServer();
 
         UUID uuid    = player.getUUID();
-        String world = player.level().dimension().location().toString();
+        String world = player.level.dimension().location().toString();
         double x = player.getX(), y = player.getY(), z = player.getZ();
         float yaw = player.getYRot(), pitch = player.getXRot();
 
@@ -325,33 +315,32 @@ public final class ModCommands {
             boolean ok = WarpManager.getInstance().setWarp(name, uuid, world, x, y, z, yaw, pitch);
             server.execute(() -> {
                 if (ok) ctx.getSource().sendSuccess(
-                        () -> Component.literal("Â§a[VSU] Warp '" + name + "' created."), true);
+                        new net.minecraft.network.chat.TextComponent("Â§a[VSU] Warp '" + name + "' created."), true);
             });
         });
         return 1;
     }
 
     private static int teleportWarp(CommandContext<CommandSourceStack> ctx, String name) {
-        ServerPlayer player = ctx.getSource().getPlayer();
-        if (player == null) return 0;
+        if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
         MinecraftServer server = ctx.getSource().getServer();
 
         VonixServerUtilities.dbAsync(() -> {
             WarpManager.Warp warp = WarpManager.getInstance().getWarp(name);
             server.execute(() -> {
                 if (warp == null) {
-                    player.sendSystemMessage(Component.literal("Â§c[VSU] Warp '" + name + "' not found."));
+                    player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§c[VSU] Warp '" + name + "' not found."), net.minecraft.Util.NIL_UUID);
                     return;
                 }
                 for (ServerLevel level : server.getAllLevels()) {
                     if (level.dimension().location().toString().equals(warp.world())) {
                         TeleportManager.getInstance().teleportPlayer(
                                 player, level, warp.x(), warp.y(), warp.z(), warp.yaw(), warp.pitch());
-                        player.sendSystemMessage(Component.literal("Â§a[VSU] Warped to '" + name + "'."));
+                        player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§a[VSU] Warped to '" + name + "'."), net.minecraft.Util.NIL_UUID);
                         return;
                     }
                 }
-                player.sendSystemMessage(Component.literal("Â§c[VSU] Warp world is unavailable."));
+                player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§c[VSU] Warp world is unavailable."), net.minecraft.Util.NIL_UUID);
             });
         });
         return 1;
@@ -364,9 +353,9 @@ public final class ModCommands {
             boolean ok = WarpManager.getInstance().deleteWarp(name);
             server.execute(() -> {
                 if (ok) ctx.getSource().sendSuccess(
-                        () -> Component.literal("Â§a[VSU] Warp '" + name + "' deleted."), true);
+                        new net.minecraft.network.chat.TextComponent("Â§a[VSU] Warp '" + name + "' deleted."), true);
                 else ctx.getSource().sendFailure(
-                        Component.literal("Â§c[VSU] Warp '" + name + "' not found."));
+                        new net.minecraft.network.chat.TextComponent("Â§c[VSU] Warp '" + name + "' not found."));
             });
         });
         return 1;
@@ -379,9 +368,9 @@ public final class ModCommands {
             var warps = WarpManager.getInstance().getWarps();
             server.execute(() -> {
                 if (warps.isEmpty()) {
-                    ctx.getSource().sendSuccess(() -> Component.literal("Â§7[VSU] No warps available."), false);
+                    ctx.getSource().sendSuccess(new net.minecraft.network.chat.TextComponent("Â§7[VSU] No warps available."), false);
                 } else {
-                    ctx.getSource().sendSuccess(() -> Component.literal(
+                    ctx.getSource().sendSuccess(new net.minecraft.network.chat.TextComponent(
                             "Â§6[VSU] Warps: Â§e" + String.join(", ",
                                     warps.stream().map(WarpManager.Warp::name).toList())), false);
                 }
@@ -404,8 +393,7 @@ public final class ModCommands {
     }
 
     private static int kitCommand(CommandContext<CommandSourceStack> ctx, String name) {
-        ServerPlayer player = ctx.getSource().getPlayer();
-        if (player == null) return 0;
+        if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
         MinecraftServer server = ctx.getSource().getServer();
         UUID uuid = player.getUUID();
 
@@ -415,15 +403,15 @@ public final class ModCommands {
                 switch (result.status()) {
                     case SUCCESS -> {
                         KitManager.getInstance().distributeItems(player, name);
-                        player.sendSystemMessage(Component.literal("Â§a[VSU] Kit '" + name + "' received!"));
+                        player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§a[VSU] Kit '" + name + "' received!"), net.minecraft.Util.NIL_UUID);
                     }
                     case NOT_FOUND ->
-                        player.sendSystemMessage(Component.literal("Â§c[VSU] Kit '" + name + "' not found."));
+                        player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§c[VSU] Kit '" + name + "' not found."), net.minecraft.Util.NIL_UUID);
                     case ON_COOLDOWN ->
-                        player.sendSystemMessage(Component.literal(
-                                "Â§c[VSU] Kit on cooldown â€” Â§e" + formatTime(result.remainingSeconds()) + " Â§cremaining."));
+                        player.sendMessage(new net.minecraft.network.chat.TextComponent(
+                                "Â§c[VSU] Kit on cooldown â€” Â§e" + formatTime(result.remainingSeconds()) + " Â§cremaining."), net.minecraft.Util.NIL_UUID);
                     case ALREADY_CLAIMED ->
-                        player.sendSystemMessage(Component.literal("Â§c[VSU] You have already claimed this one-time kit."));
+                        player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§c[VSU] You have already claimed this one-time kit."), net.minecraft.Util.NIL_UUID);
                 }
             });
         });
@@ -433,10 +421,10 @@ public final class ModCommands {
     private static int listKits(CommandContext<CommandSourceStack> ctx) {
         var kits = KitManager.getInstance().getKitNames();
         if (kits.isEmpty()) {
-            ctx.getSource().sendSuccess(() -> Component.literal("Â§7[VSU] No kits available."), false);
+            ctx.getSource().sendSuccess(new net.minecraft.network.chat.TextComponent("Â§7[VSU] No kits available."), false);
         } else {
             ctx.getSource().sendSuccess(
-                    () -> Component.literal("Â§6[VSU] Kits: Â§e" + String.join(", ", kits)), false);
+                    new net.minecraft.network.chat.TextComponent("Â§6[VSU] Kits: Â§e" + String.join(", ", kits)), false);
         }
         return 1;
     }
@@ -449,8 +437,9 @@ public final class ModCommands {
         d.register(Commands.literal("heal")
                 .requires(s -> s.hasPermission(2))
                 .executes(ctx -> {
-                    ServerPlayer p = ctx.getSource().getPlayer();
-                    if (p != null) AdminManager.getInstance().healPlayer(p);
+                    if (ctx.getSource().getEntity() instanceof ServerPlayer p) {
+                        AdminManager.getInstance().healPlayer(p);
+                    }
                     return 1;
                 })
                 .then(Commands.argument("player", EntityArgument.player())
@@ -458,15 +447,16 @@ public final class ModCommands {
                             ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
                             AdminManager.getInstance().healPlayer(target);
                             ctx.getSource().sendSuccess(
-                                    () -> Component.literal("Â§a[VSU] Healed Â§e" + target.getName().getString()), true);
+                                    new net.minecraft.network.chat.TextComponent("Â§a[VSU] Healed Â§e" + target.getName().getString()), true);
                             return 1;
                         })));
 
         d.register(Commands.literal("feed")
                 .requires(s -> s.hasPermission(2))
                 .executes(ctx -> {
-                    ServerPlayer p = ctx.getSource().getPlayer();
-                    if (p != null) AdminManager.getInstance().feedPlayer(p);
+                    if (ctx.getSource().getEntity() instanceof ServerPlayer p) {
+                        AdminManager.getInstance().feedPlayer(p);
+                    }
                     return 1;
                 })
                 .then(Commands.argument("player", EntityArgument.player())
@@ -474,15 +464,16 @@ public final class ModCommands {
                             ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
                             AdminManager.getInstance().feedPlayer(target);
                             ctx.getSource().sendSuccess(
-                                    () -> Component.literal("Â§a[VSU] Fed Â§e" + target.getName().getString()), true);
+                                    new net.minecraft.network.chat.TextComponent("Â§a[VSU] Fed Â§e" + target.getName().getString()), true);
                             return 1;
                         })));
 
         d.register(Commands.literal("fly")
                 .requires(s -> s.hasPermission(2))
                 .executes(ctx -> {
-                    ServerPlayer p = ctx.getSource().getPlayer();
-                    if (p != null) AdminManager.getInstance().toggleFly(p);
+                    if (ctx.getSource().getEntity() instanceof ServerPlayer p) {
+                        AdminManager.getInstance().toggleFly(p);
+                    }
                     return 1;
                 })
                 .then(Commands.argument("player", EntityArgument.player())
@@ -494,16 +485,18 @@ public final class ModCommands {
         d.register(Commands.literal("god")
                 .requires(s -> s.hasPermission(2))
                 .executes(ctx -> {
-                    ServerPlayer p = ctx.getSource().getPlayer();
-                    if (p != null) AdminManager.getInstance().toggleGodMode(p);
+                    if (ctx.getSource().getEntity() instanceof ServerPlayer p) {
+                        AdminManager.getInstance().toggleGodMode(p);
+                    }
                     return 1;
                 }));
 
         d.register(Commands.literal("vanish")
                 .requires(s -> s.hasPermission(2))
                 .executes(ctx -> {
-                    ServerPlayer p = ctx.getSource().getPlayer();
-                    if (p != null) AdminManager.getInstance().toggleVanish(p, ctx.getSource().getServer());
+                    if (ctx.getSource().getEntity() instanceof ServerPlayer p) {
+                        AdminManager.getInstance().toggleVanish(p, ctx.getSource().getServer());
+                    }
                     return 1;
                 }));
 
@@ -520,27 +513,25 @@ public final class ModCommands {
     }
 
     private static int setGameMode(CommandContext<CommandSourceStack> ctx, net.minecraft.world.level.GameType mode) {
-        ServerPlayer p = ctx.getSource().getPlayer();
-        if (p != null) {
+        if (ctx.getSource().getEntity() instanceof ServerPlayer p) {
             p.setGameMode(mode);
-            p.sendSystemMessage(Component.literal("Â§a[VSU] Gamemode set to " + mode.getName()));
+            p.sendMessage(new net.minecraft.network.chat.TextComponent("§a[VSU] Gamemode set to " + mode.getName()), net.minecraft.Util.NIL_UUID);
         }
         return 1;
     }
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• 
     // SPAWN
     // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     private static void registerSpawn(CommandDispatcher<CommandSourceStack> d) {
         d.register(Commands.literal("spawn").executes(ctx -> {
-            ServerPlayer p = ctx.getSource().getPlayer();
-            if (p == null) return 0;
+            if (!(ctx.getSource().getEntity() instanceof ServerPlayer p)) return 0;
             var spawnPos = ctx.getSource().getServer().overworld().getSharedSpawnPos();
             TeleportManager.getInstance().teleportPlayer(
                     p, ctx.getSource().getServer().overworld(),
                     spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5, 0f, 0f);
-            p.sendSystemMessage(Component.literal("Â§a[VSU] Teleported to spawn."));
+            p.sendMessage(new net.minecraft.network.chat.TextComponent("Â§a[VSU] Teleported to spawn."), net.minecraft.Util.NIL_UUID);
             return 1;
         }));
     }
@@ -561,9 +552,9 @@ public final class ModCommands {
 
     private static int showVersion(CommandContext<CommandSourceStack> ctx) {
         ctx.getSource().sendSuccess(
-                () -> Component.literal("Â§6[VSU] Â§fVersion: Â§e" + VonixServerUtilities.VERSION), false);
+                new net.minecraft.network.chat.TextComponent("Â§6[VSU] Â§fVersion: Â§e" + VonixServerUtilities.VERSION), false);
         ctx.getSource().sendSuccess(
-                () -> Component.literal("Â§7Platform: Architectury 1.18.2"), false);
+                new net.minecraft.network.chat.TextComponent("Â§7Platform: Architectury 1.18.2"), false);
         return 1;
     }
 
@@ -571,23 +562,23 @@ public final class ModCommands {
         int players = ctx.getSource().getServer().getPlayerList().getPlayerCount();
         int max     = ctx.getSource().getServer().getMaxPlayers();
         ctx.getSource().sendSuccess(
-                () -> Component.literal("Â§6[VSU] Â§fStatus: Â§aOnline Â§7(" + players + "/" + max + ")"), false);
+                new net.minecraft.network.chat.TextComponent("Â§6[VSU] Â§fStatus: Â§aOnline Â§7(" + players + "/" + max + ")"), false);
         ctx.getSource().sendSuccess(
-                () -> Component.literal("Â§7Modules: homes, warps, kits, TPA, back, admin, world"), false);
+                new net.minecraft.network.chat.TextComponent("Â§7Modules: homes, warps, kits, TPA, back, admin, world"), false);
         return 1;
     }
 
     private static int reloadConfig(CommandContext<CommandSourceStack> ctx) {
         ctx.getSource().sendSuccess(
-                () -> Component.literal("Â§e[VSU] Config reloads require a server restart."), true);
+                new net.minecraft.network.chat.TextComponent("Â§e[VSU] Config reloads require a server restart."), true);
         return 1;
     }
 
     private static int showHelp(CommandContext<CommandSourceStack> ctx) {
-        ctx.getSource().sendSuccess(() -> Component.literal("Â§6Â§l=== Vonix Server Utilities ==="), false);
-        ctx.getSource().sendSuccess(() -> Component.literal("Â§e/vonixsu version Â§7â€” show version"), false);
-        ctx.getSource().sendSuccess(() -> Component.literal("Â§e/vonixsu status  Â§7â€” show server status"), false);
-        ctx.getSource().sendSuccess(() -> Component.literal("Â§e/vonixsu reload  Â§7â€” reload info"), false);
+        ctx.getSource().sendSuccess(new net.minecraft.network.chat.TextComponent("Â§6Â§l=== Vonix Server Utilities ==="), false);
+        ctx.getSource().sendSuccess(new net.minecraft.network.chat.TextComponent("Â§e/vonixsu version Â§7â€” show version"), false);
+        ctx.getSource().sendSuccess(new net.minecraft.network.chat.TextComponent("Â§e/vonixsu status  Â§7â€” show server status"), false);
+        ctx.getSource().sendSuccess(new net.minecraft.network.chat.TextComponent("Â§e/vonixsu reload  Â§7â€” reload info"), false);
         return 1;
     }
 }

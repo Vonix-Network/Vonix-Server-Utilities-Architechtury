@@ -1,4 +1,4 @@
-﻿package network.vonix.serverutilities.forge;
+package network.vonix.serverutilities.forge;
 
 import dev.architectury.platform.forge.EventBuses;
 import net.minecraftforge.fml.common.Mod;

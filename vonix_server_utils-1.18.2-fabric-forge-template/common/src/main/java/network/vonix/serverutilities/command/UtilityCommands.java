@@ -93,33 +93,33 @@ public final class UtilityCommands {
     private static int teleportTo(CommandContext<CommandSourceStack> ctx, ServerPlayer target) {
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
         TeleportManager.getInstance().saveLastLocation(player);
-        player.teleportTo(((net.minecraft.server.level.ServerLevel) target.level()), target.getX(), target.getY(), target.getZ(),
+        player.teleportTo(((net.minecraft.server.level.ServerLevel) target.level), target.getX(), target.getY(), target.getZ(),
                 target.getYRot(), target.getXRot());
-        player.sendSystemMessage(Component.literal("Â§aTeleported to Â§e" + target.getName().getString()));
+        player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§aTeleported to Â§e" + target.getName().getString()), net.minecraft.Util.NIL_UUID);
         return 1;
     }
 
     private static int teleportPlayerTo(CommandContext<CommandSourceStack> ctx,
                                          ServerPlayer target, ServerPlayer dest) {
         TeleportManager.getInstance().saveLastLocation(target);
-        target.teleportTo(((net.minecraft.server.level.ServerLevel) dest.level()), dest.getX(), dest.getY(), dest.getZ(),
+        target.teleportTo(((net.minecraft.server.level.ServerLevel) dest.level), dest.getX(), dest.getY(), dest.getZ(),
                 dest.getYRot(), dest.getXRot());
-        ctx.getSource().sendSuccess(() -> Component.literal(
+        ctx.getSource().sendSuccess(new net.minecraft.network.chat.TextComponent(
                 "Â§aTeleported Â§e" + target.getName().getString() + "Â§a to Â§e" + dest.getName().getString()), true);
-        target.sendSystemMessage(Component.literal(
-                "Â§aYou were teleported to Â§e" + dest.getName().getString()));
+        target.sendMessage(new net.minecraft.network.chat.TextComponent(
+                "Â§aYou were teleported to Â§e" + dest.getName().getString()), net.minecraft.Util.NIL_UUID);
         return 1;
     }
 
     private static int teleportHere(CommandContext<CommandSourceStack> ctx, ServerPlayer target) {
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
         TeleportManager.getInstance().saveLastLocation(target);
-        target.teleportTo(((net.minecraft.server.level.ServerLevel) player.level()), player.getX(), player.getY(), player.getZ(),
+        target.teleportTo(((net.minecraft.server.level.ServerLevel) player.level), player.getX(), player.getY(), player.getZ(),
                 player.getYRot(), player.getXRot());
-        player.sendSystemMessage(Component.literal(
-                "Â§aTeleported Â§e" + target.getName().getString() + "Â§a to you"));
-        target.sendSystemMessage(Component.literal(
-                "Â§aYou were teleported to Â§e" + player.getName().getString()));
+        player.sendMessage(new net.minecraft.network.chat.TextComponent(
+                "Â§aTeleported Â§e" + target.getName().getString() + "Â§a to you"), net.minecraft.Util.NIL_UUID);
+        target.sendMessage(new net.minecraft.network.chat.TextComponent(
+                "Â§aYou were teleported to Â§e" + player.getName().getString()), net.minecraft.Util.NIL_UUID);
         return 1;
     }
 
@@ -129,14 +129,14 @@ public final class UtilityCommands {
         for (ServerPlayer t : player.server.getPlayerList().getPlayers()) {
             if (t != player) {
                 TeleportManager.getInstance().saveLastLocation(t);
-                t.teleportTo(((net.minecraft.server.level.ServerLevel) player.level()), player.getX(), player.getY(), player.getZ(),
+                t.teleportTo(((net.minecraft.server.level.ServerLevel) player.level), player.getX(), player.getY(), player.getZ(),
                         player.getYRot(), player.getXRot());
-                t.sendSystemMessage(Component.literal(
-                        "Â§aYou were teleported to Â§e" + player.getName().getString()));
+                t.sendMessage(new net.minecraft.network.chat.TextComponent(
+                        "Â§aYou were teleported to Â§e" + player.getName().getString()), net.minecraft.Util.NIL_UUID);
                 count++;
             }
         }
-        player.sendSystemMessage(Component.literal("Â§aTeleported Â§e" + count + "Â§a players to you"));
+        player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§aTeleported Â§e" + count + "Â§a players to you"), net.minecraft.Util.NIL_UUID);
         return count;
     }
 
@@ -146,18 +146,18 @@ public final class UtilityCommands {
         double y = DoubleArgumentType.getDouble(ctx, "y");
         double z = DoubleArgumentType.getDouble(ctx, "z");
         TeleportManager.getInstance().saveLastLocation(player);
-        player.teleportTo(((net.minecraft.server.level.ServerLevel) player.level()), x, y, z, player.getYRot(), player.getXRot());
-        player.sendSystemMessage(Component.literal(
-                String.format("Â§aTeleported to Â§e%.1f, %.1f, %.1f", x, y, z)));
+        player.teleportTo(((net.minecraft.server.level.ServerLevel) player.level), x, y, z, player.getYRot(), player.getXRot());
+        player.sendMessage(new net.minecraft.network.chat.TextComponent(
+                String.format("Â§aTeleported to Â§e%.1f, %.1f, %.1f", x, y, z)), net.minecraft.Util.NIL_UUID);
         return 1;
     }
 
     private static int setSpawn(CommandContext<CommandSourceStack> ctx) {
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
         BlockPos pos = player.blockPosition();
-        ((net.minecraft.server.level.ServerLevel) player.level()).setDefaultSpawnPos(pos, 0);
-        player.sendSystemMessage(Component.literal(
-                String.format("Â§aSpawn set to Â§e%d, %d, %d", pos.getX(), pos.getY(), pos.getZ())));
+        ((net.minecraft.server.level.ServerLevel) player.level).setDefaultSpawnPos(pos, 0);
+        player.sendMessage(new net.minecraft.network.chat.TextComponent(
+                String.format("Â§aSpawn set to Â§e%d, %d, %d", pos.getX(), pos.getY(), pos.getZ())), net.minecraft.Util.NIL_UUID);
         return 1;
     }
 
@@ -195,10 +195,10 @@ public final class UtilityCommands {
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
         String colored = name.replace("&", "Â§");
         nicknames.put(player.getUUID(), colored);
-        player.setCustomName(Component.literal(colored));
+        player.setCustomName(new net.minecraft.network.chat.TextComponent(colored));
         player.setCustomNameVisible(false);
         broadcastTabListUpdate(player);
-        player.sendSystemMessage(Component.literal("Â§aNickname set to: " + colored));
+        player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§aNickname set to: " + colored), net.minecraft.Util.NIL_UUID);
         return 1;
     }
 
@@ -207,7 +207,7 @@ public final class UtilityCommands {
         nicknames.remove(player.getUUID());
         player.setCustomName(null);
         broadcastTabListUpdate(player);
-        player.sendSystemMessage(Component.literal("Â§aNickname cleared."));
+        player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§aNickname cleared."), net.minecraft.Util.NIL_UUID);
         return 1;
     }
 
@@ -222,11 +222,11 @@ public final class UtilityCommands {
     private static int showSeen(CommandContext<CommandSourceStack> ctx, String playerName) {
         if (ctx.getSource().getServer().getPlayerList().getPlayerByName(playerName) != null) {
             ctx.getSource().sendSuccess(
-                    () -> Component.literal("Â§e" + playerName + " Â§7is currently Â§aonline"), false);
+                    new net.minecraft.network.chat.TextComponent("Â§e" + playerName + " Â§7is currently Â§aonline"), false);
         } else {
             Long ts = lastSeen.values().stream().findFirst().orElse(null); // placeholder
             ctx.getSource().sendSuccess(
-                    () -> Component.literal("Â§e" + playerName + " Â§7is Â§coffline"), false);
+                    new net.minecraft.network.chat.TextComponent("Â§e" + playerName + " Â§7is Â§coffline"), false);
         }
         return 1;
     }
@@ -234,28 +234,28 @@ public final class UtilityCommands {
     private static int showWhois(CommandContext<CommandSourceStack> ctx, ServerPlayer target) {
         String name    = target.getName().getString();
         String display = nicknames.getOrDefault(target.getUUID(), name);
-        int ping       = target.connection.latency();
+        int ping       = target.latency;
         BlockPos pos   = target.blockPosition();
-        String dim     = target.level().dimension().location().toString();
+        String dim     = target.level.dimension().location().toString();
 
-        ctx.getSource().sendSuccess(() -> Component.literal("Â§6=== Â§e" + name + " Â§6==="), false);
-        ctx.getSource().sendSuccess(() -> Component.literal("Â§7Display: " + display), false);
-        ctx.getSource().sendSuccess(() -> Component.literal("Â§7UUID: Â§f" + target.getUUID()), false);
-        ctx.getSource().sendSuccess(() -> Component.literal("Â§7Ping: Â§f" + ping + "ms"), false);
-        ctx.getSource().sendSuccess(() -> Component.literal(
+        ctx.getSource().sendSuccess(new net.minecraft.network.chat.TextComponent("Â§6=== Â§e" + name + " Â§6==="), false);
+        ctx.getSource().sendSuccess(new net.minecraft.network.chat.TextComponent("Â§7Display: " + display), false);
+        ctx.getSource().sendSuccess(new net.minecraft.network.chat.TextComponent("Â§7UUID: Â§f" + target.getUUID()), false);
+        ctx.getSource().sendSuccess(new net.minecraft.network.chat.TextComponent("Â§7Ping: Â§f" + ping + "ms"), false);
+        ctx.getSource().sendSuccess(new net.minecraft.network.chat.TextComponent(
                 String.format("Â§7Location: Â§f%d, %d, %d Â§7in Â§f%s", pos.getX(), pos.getY(), pos.getZ(), dim)), false);
-        ctx.getSource().sendSuccess(() -> Component.literal(
+        ctx.getSource().sendSuccess(new net.minecraft.network.chat.TextComponent(
                 "Â§7Health: Â§c" + (int) target.getHealth() + "Â§7/Â§c" + (int) target.getMaxHealth()), false);
-        ctx.getSource().sendSuccess(() -> Component.literal(
+        ctx.getSource().sendSuccess(new net.minecraft.network.chat.TextComponent(
                 "Â§7Food: Â§e" + target.getFoodData().getFoodLevel() + "Â§7/Â§e20"), false);
         return 1;
     }
 
     private static int showPing(CommandContext<CommandSourceStack> ctx) {
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
-        int ping  = player.connection.latency();
+        int ping  = player.latency;
         String col = ping < 50 ? "Â§a" : ping < 150 ? "Â§e" : "Â§c";
-        player.sendSystemMessage(Component.literal("Â§7Your ping: " + col + ping + "ms"));
+        player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§7Your ping: " + col + ping + "ms"), net.minecraft.Util.NIL_UUID);
         return 1;
     }
 
@@ -263,15 +263,15 @@ public final class UtilityCommands {
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
         List<String> nearby = new ArrayList<>();
         for (ServerPlayer other : player.server.getPlayerList().getPlayers()) {
-            if (other != player && other.level() == player.level()) {
+            if (other != player && other.level == player.level) {
                 double dist = player.distanceTo(other);
                 if (dist <= radius) nearby.add(String.format("Â§e%s Â§7(%.0fm)", other.getName().getString(), dist));
             }
         }
         if (nearby.isEmpty()) {
-            player.sendSystemMessage(Component.literal("Â§7No players within " + radius + " blocks."));
+            player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§7No players within " + radius + " blocks."), net.minecraft.Util.NIL_UUID);
         } else {
-            player.sendSystemMessage(Component.literal("Â§6Nearby: " + String.join(", ", nearby)));
+            player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§6Nearby: " + String.join(", ", nearby)), net.minecraft.Util.NIL_UUID);
         }
         return 1;
     }
@@ -279,8 +279,8 @@ public final class UtilityCommands {
     private static int getPos(CommandContext<CommandSourceStack> ctx) {
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
         BlockPos pos = player.blockPosition();
-        player.sendSystemMessage(Component.literal(
-                String.format("Â§7Position: Â§eX: %d, Y: %d, Z: %d", pos.getX(), pos.getY(), pos.getZ())));
+        player.sendMessage(new net.minecraft.network.chat.TextComponent(
+                String.format("Â§7Position: Â§eX: %d, Y: %d, Z: %d", pos.getX(), pos.getY(), pos.getZ())), net.minecraft.Util.NIL_UUID);
         return 1;
     }
 
@@ -288,8 +288,8 @@ public final class UtilityCommands {
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
         int ticks = player.getStats().getValue(net.minecraft.stats.Stats.CUSTOM, net.minecraft.stats.Stats.PLAY_TIME);
         long seconds = ticks / 20L;
-        player.sendSystemMessage(Component.literal(
-                String.format("Â§7Playtime: Â§e%dh %dm", seconds / 3600, (seconds % 3600) / 60)));
+        player.sendMessage(new net.minecraft.network.chat.TextComponent(
+                String.format("Â§7Playtime: Â§e%dh %dm", seconds / 3600, (seconds % 3600) / 60)), net.minecraft.Util.NIL_UUID);
         return 1;
     }
 
@@ -303,7 +303,7 @@ public final class UtilityCommands {
         var players = ctx.getSource().getServer().getPlayerList().getPlayers();
         int max     = ctx.getSource().getServer().getMaxPlayers();
         ctx.getSource().sendSuccess(
-                () -> Component.literal("Â§6Players Online: Â§e" + players.size() + "/" + max), false);
+                new net.minecraft.network.chat.TextComponent("Â§6Players Online: Â§e" + players.size() + "/" + max), false);
         StringBuilder sb = new StringBuilder();
         for (ServerPlayer p : players) {
             if (!sb.isEmpty()) sb.append("Â§7, ");
@@ -311,7 +311,7 @@ public final class UtilityCommands {
             sb.append(nick != null ? nick : "Â§e" + p.getName().getString());
         }
         String list = sb.toString();
-        ctx.getSource().sendSuccess(() -> Component.literal(list), false);
+        ctx.getSource().sendSuccess(new net.minecraft.network.chat.TextComponent(list), false);
         return 1;
     }
 
@@ -350,13 +350,13 @@ public final class UtilityCommands {
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer sender)) return 0;
         Set<UUID> ignored = ignoreList.getOrDefault(target.getUUID(), Set.of());
         if (ignored.contains(sender.getUUID())) {
-            sender.sendSystemMessage(Component.literal("Â§cThis player is ignoring you."));
+            sender.sendMessage(new net.minecraft.network.chat.TextComponent("Â§cThis player is ignoring you."), net.minecraft.Util.NIL_UUID);
             return 0;
         }
-        sender.sendSystemMessage(Component.literal(
-                "Â§7[Â§6me Â§7â†’ Â§e" + target.getName().getString() + "Â§7] Â§f" + message));
-        target.sendSystemMessage(Component.literal(
-                "Â§7[Â§e" + sender.getName().getString() + " Â§7â†’ Â§6meÂ§7] Â§f" + message));
+        sender.sendMessage(new net.minecraft.network.chat.TextComponent(
+                "Â§7[Â§6me Â§7â†’ Â§e" + target.getName().getString() + "Â§7] Â§f" + message), net.minecraft.Util.NIL_UUID);
+        target.sendMessage(new net.minecraft.network.chat.TextComponent(
+                "Â§7[Â§e" + sender.getName().getString() + " Â§7â†’ Â§6meÂ§7] Â§f" + message), net.minecraft.Util.NIL_UUID);
         lastMessaged.put(sender.getUUID(), target.getUUID());
         lastMessaged.put(target.getUUID(), sender.getUUID());
         return 1;
@@ -366,12 +366,12 @@ public final class UtilityCommands {
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer sender)) return 0;
         UUID lastUuid = lastMessaged.get(sender.getUUID());
         if (lastUuid == null) {
-            sender.sendSystemMessage(Component.literal("Â§cNo one to reply to."));
+            sender.sendMessage(new net.minecraft.network.chat.TextComponent("Â§cNo one to reply to."), net.minecraft.Util.NIL_UUID);
             return 0;
         }
         ServerPlayer target = sender.server.getPlayerList().getPlayer(lastUuid);
         if (target == null) {
-            sender.sendSystemMessage(Component.literal("Â§cPlayer is offline."));
+            sender.sendMessage(new net.minecraft.network.chat.TextComponent("Â§cPlayer is offline."), net.minecraft.Util.NIL_UUID);
             return 0;
         }
         return sendMessage(ctx, target, message);
@@ -381,10 +381,10 @@ public final class UtilityCommands {
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
         Set<UUID> ignored = ignoreList.computeIfAbsent(player.getUUID(), k -> ConcurrentHashMap.newKeySet());
         if (ignored.remove(target.getUUID())) {
-            player.sendSystemMessage(Component.literal("Â§aNo longer ignoring Â§e" + target.getName().getString()));
+            player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§aNo longer ignoring Â§e" + target.getName().getString()), net.minecraft.Util.NIL_UUID);
         } else {
             ignored.add(target.getUUID());
-            player.sendSystemMessage(Component.literal("Â§cNow ignoring Â§e" + target.getName().getString()));
+            player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§cNow ignoring Â§e" + target.getName().getString()), net.minecraft.Util.NIL_UUID);
         }
         return 1;
     }
@@ -413,13 +413,13 @@ public final class UtilityCommands {
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
         var hand = player.getMainHandItem();
         if (hand.isEmpty()) {
-            player.sendSystemMessage(Component.literal("Â§cHold an item to wear as a hat."));
+            player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§cHold an item to wear as a hat."), net.minecraft.Util.NIL_UUID);
             return 0;
         }
         var helmet = player.getInventory().armor.get(3);
         player.getInventory().armor.set(3, hand.copy());
         player.setItemInHand(InteractionHand.MAIN_HAND, helmet);
-        player.sendSystemMessage(Component.literal("Â§aWearing Â§e" + hand.getHoverName().getString()));
+        player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§aWearing Â§e" + hand.getHoverName().getString()), net.minecraft.Util.NIL_UUID);
         return 1;
     }
 
@@ -428,7 +428,7 @@ public final class UtilityCommands {
         var hand = player.getMainHandItem();
         if (hand.isEmpty()) return 0;
         hand.setCount(hand.getMaxStackSize());
-        player.sendSystemMessage(Component.literal("Â§aStack filled to Â§e" + hand.getCount()));
+        player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§aStack filled to Â§e" + hand.getCount()), net.minecraft.Util.NIL_UUID);
         return 1;
     }
 
@@ -436,7 +436,7 @@ public final class UtilityCommands {
         if (target == null && ctx.getSource().getEntity() instanceof ServerPlayer p) target = p;
         if (target == null) return 0;
         target.getInventory().clearContent();
-        target.sendSystemMessage(Component.literal("Â§aInventory cleared."));
+        target.sendMessage(new net.minecraft.network.chat.TextComponent("Â§aInventory cleared."), net.minecraft.Util.NIL_UUID);
         return 1;
     }
 
@@ -444,11 +444,11 @@ public final class UtilityCommands {
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
         var hand = player.getMainHandItem();
         if (hand.isEmpty() || !hand.isDamageableItem()) {
-            player.sendSystemMessage(Component.literal("Â§cHold a repairable item."));
+            player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§cHold a repairable item."), net.minecraft.Util.NIL_UUID);
             return 0;
         }
         hand.setDamageValue(0);
-        player.sendSystemMessage(Component.literal("Â§aItem repaired."));
+        player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§aItem repaired."), net.minecraft.Util.NIL_UUID);
         return 1;
     }
 
@@ -502,7 +502,7 @@ public final class UtilityCommands {
     private static int broadcast(CommandContext<CommandSourceStack> ctx, String message) {
         String colored = message.replace("&", "Â§");
         for (ServerPlayer p : ctx.getSource().getServer().getPlayerList().getPlayers()) {
-            p.sendSystemMessage(Component.literal("Â§4[Broadcast] Â§f" + colored));
+            p.sendMessage(new net.minecraft.network.chat.TextComponent("Â§4[Broadcast] Â§f" + colored), net.minecraft.Util.NIL_UUID);
         }
         return 1;
     }
@@ -512,14 +512,14 @@ public final class UtilityCommands {
         long used   = (rt.totalMemory() - rt.freeMemory()) / 1024 / 1024;
         long max    = rt.maxMemory() / 1024 / 1024;
         System.gc();
-        ctx.getSource().sendSuccess(() -> Component.literal("Â§6=== Server Stats ==="), false);
-        ctx.getSource().sendSuccess(() -> Component.literal("Â§7Memory: Â§e" + used + "MB Â§7/ Â§e" + max + "MB"), false);
-        ctx.getSource().sendSuccess(() -> Component.literal("Â§7Threads: Â§e" + Thread.activeCount()), false);
+        ctx.getSource().sendSuccess(new net.minecraft.network.chat.TextComponent("Â§6=== Server Stats ==="), false);
+        ctx.getSource().sendSuccess(new net.minecraft.network.chat.TextComponent("Â§7Memory: Â§e" + used + "MB Â§7/ Â§e" + max + "MB"), false);
+        ctx.getSource().sendSuccess(new net.minecraft.network.chat.TextComponent("Â§7Threads: Â§e" + Thread.activeCount()), false);
         return 1;
     }
 
     private static int showLag(CommandContext<CommandSourceStack> ctx) {
-        ctx.getSource().sendSuccess(() -> Component.literal("Â§7TPS: Â§acheck F3 for debug info"), false);
+        ctx.getSource().sendSuccess(new net.minecraft.network.chat.TextComponent("Â§7TPS: Â§acheck F3 for debug info"), false);
         return 1;
     }
 
@@ -528,7 +528,7 @@ public final class UtilityCommands {
         InvseeContainer view = new InvseeContainer(target);
         player.openMenu(new net.minecraft.world.SimpleMenuProvider(
                 (id, playerInv, p) -> net.minecraft.world.inventory.ChestMenu.sixRows(id, playerInv, view),
-                Component.literal("\u00a76[INVSEE] \u00a7e" + target.getName().getString())));
+                new net.minecraft.network.chat.TextComponent("\u00a76[INVSEE] \u00a7e" + target.getName().getString())));
         return 1;
     }
 
@@ -544,7 +544,7 @@ public final class UtilityCommands {
         player.openMenu(new net.minecraft.world.SimpleMenuProvider(
                 (id, inv, p) -> net.minecraft.world.inventory.ChestMenu.threeRows(id, inv,
                         enderTarget.getEnderChestInventory()),
-                Component.literal("Ender Chest")));
+                new net.minecraft.network.chat.TextComponent("Ender Chest")));
         return 1;
     }
 
@@ -553,8 +553,8 @@ public final class UtilityCommands {
         player.openMenu(new net.minecraft.world.SimpleMenuProvider(
                 (id, inv, p) -> new net.minecraft.world.inventory.CraftingMenu(id, inv,
                         net.minecraft.world.inventory.ContainerLevelAccess.create(
-                                player.level(), player.blockPosition())),
-                Component.literal("Crafting")));
+                                player.level, player.blockPosition())),
+                new net.minecraft.network.chat.TextComponent("Crafting")));
         return 1;
     }
 
@@ -563,8 +563,8 @@ public final class UtilityCommands {
         player.openMenu(new net.minecraft.world.SimpleMenuProvider(
                 (id, inv, p) -> new net.minecraft.world.inventory.AnvilMenu(id, inv,
                         net.minecraft.world.inventory.ContainerLevelAccess.create(
-                                player.level(), player.blockPosition())),
-                Component.literal("Anvil")));
+                                player.level, player.blockPosition())),
+                new net.minecraft.network.chat.TextComponent("Anvil")));
         return 1;
     }
 
@@ -616,11 +616,11 @@ public final class UtilityCommands {
                 }
                 player.openMenu(new net.minecraft.world.SimpleMenuProvider(
                         (id, playerInv, p) -> net.minecraft.world.inventory.ChestMenu.sixRows(id, playerInv, container),
-                        Component.literal("\u00a76[BACKPACK] \u00a7e" + target.getName().getString())));
+                        new net.minecraft.network.chat.TextComponent("\u00a76[BACKPACK] \u00a7e" + target.getName().getString())));
                 return 1;
             }
         }
-        player.sendSystemMessage(Component.literal("\u00a7cNo backpack found."));
+        player.sendMessage(new net.minecraft.network.chat.TextComponent("\u00a7cNo backpack found."), net.minecraft.Util.NIL_UUID);
         return 0;
     }
 

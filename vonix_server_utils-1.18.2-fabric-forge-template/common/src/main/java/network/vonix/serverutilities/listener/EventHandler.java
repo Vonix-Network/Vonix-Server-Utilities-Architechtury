@@ -1,4 +1,4 @@
-﻿package network.vonix.serverutilities.listener;
+package network.vonix.serverutilities.listener;
 
 import dev.architectury.event.EventResult;
 import dev.architectury.event.events.common.CommandRegistrationEvent;
@@ -32,7 +32,7 @@ public final class EventHandler {
 
         // â”€â”€ Server starting â€” load config & open DB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         LifecycleEvent.SERVER_STARTING.register(server -> {
-            ModConfig.INSTANCE.load(server.getServerDirectory().resolve("config"));
+            ModConfig.INSTANCE.load(server.getServerDirectory().toPath().resolve("config"));
             // Pass server so the DB can locate the VonixCore DB for migration
             VonixServerUtilities.getInstance().getDatabase().init(server);
         });

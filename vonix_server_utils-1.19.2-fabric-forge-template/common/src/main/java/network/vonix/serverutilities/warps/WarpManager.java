@@ -1,4 +1,4 @@
-﻿package network.vonix.serverutilities.warps;
+package network.vonix.serverutilities.warps;
 
 import net.minecraft.server.level.ServerPlayer;
 import network.vonix.serverutilities.VonixServerUtilities;
@@ -48,7 +48,7 @@ public final class WarpManager {
     /** Convenience overload that captures player position on the caller's thread. */
     public boolean setWarp(String name, ServerPlayer player) {
         return setWarp(name, player.getUUID(),
-                player.level().dimension().location().toString(),
+                player.level.dimension().location().toString(),
                 player.getX(), player.getY(), player.getZ(),
                 player.getYRot(), player.getXRot());
     }

@@ -1,4 +1,4 @@
-﻿package network.vonix.serverutilities.warps;
+package network.vonix.serverutilities.warps;
 
 import net.minecraft.server.level.ServerPlayer;
 import network.vonix.serverutilities.VonixServerUtilities;

@@ -1,4 +1,4 @@
-﻿package network.vonix.serverutilities.homes;
+package network.vonix.serverutilities.homes;
 
 import net.minecraft.server.level.ServerPlayer;
 import network.vonix.serverutilities.VonixServerUtilities;

@@ -1,4 +1,4 @@
-﻿package network.vonix.serverutilities.kits;
+package network.vonix.serverutilities.kits;
 
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceLocation;
