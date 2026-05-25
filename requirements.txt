@@ -2,3 +2,5 @@ fastapi>=0.100.0
 uvicorn>=0.22.0
 PyQt6>=6.5.0
 PyQt6-WebEngine>=6.5.0
+rich>=13.0.0
+
