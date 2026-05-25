@@ -59,3 +59,18 @@ logs/
 local.properties
 *.env
 .env.local
+
+# ── Releases (compiled jars, built locally) ──────────────────
+releases/
+releases.b/
+
+# ── Nuitka build artifacts ───────────────────────────────────
+*.dist/
+*.build/
+*.onefile-build/
+*.exe
+*.pyi
+*.nuitka-*
+
+# ── Zip archives ─────────────────────────────────────────────
+*.zip
