@@ -14,9 +14,11 @@ import net.minecraft.server.level.ServerPlayer;
 import network.vonix.serverutilities.VonixServerUtilities;
 import network.vonix.serverutilities.admin.AdminManager;
 import network.vonix.serverutilities.config.ModConfig;
+import network.vonix.serverutilities.features.FeatureGate;
 import network.vonix.serverutilities.homes.HomeManager;
 import network.vonix.serverutilities.kits.KitManager;
 import network.vonix.serverutilities.teleport.TeleportManager;
+import network.vonix.serverutilities.venary.LinkCommands;
 import network.vonix.serverutilities.warps.WarpManager;
 
 import java.util.UUID;
@@ -55,20 +57,25 @@ public final class ModCommands {
 
     private static void registerHome(CommandDispatcher<CommandSourceStack> d) {
         d.register(Commands.literal("home")
+                .requires(FeatureGate.requires("homes"))
                 .then(Commands.argument("name", StringArgumentType.word())
                         .executes(ctx -> goHome(ctx, StringArgumentType.getString(ctx, "name"))))
                 .executes(ctx -> goHome(ctx, "home")));
 
         d.register(Commands.literal("sethome")
+                .requires(FeatureGate.requires("homes"))
                 .then(Commands.argument("name", StringArgumentType.word())
                         .executes(ctx -> setHome(ctx, StringArgumentType.getString(ctx, "name"))))
                 .executes(ctx -> setHome(ctx, "home")));
 
         d.register(Commands.literal("delhome")
+                .requires(FeatureGate.requires("homes"))
                 .then(Commands.argument("name", StringArgumentType.word())
                         .executes(ctx -> delHome(ctx, StringArgumentType.getString(ctx, "name")))));
 
-        d.register(Commands.literal("homes").executes(ModCommands::listHomes));
+        d.register(Commands.literal("homes")
+                .requires(FeatureGate.requires("homes"))
+                .executes(ModCommands::listHomes));
     }
 
     private static int goHome(CommandContext<CommandSourceStack> ctx, String name) {
@@ -165,15 +172,21 @@ public final class ModCommands {
 
     private static void registerTpa(CommandDispatcher<CommandSourceStack> d) {
         d.register(Commands.literal("tpa")
+                .requires(FeatureGate.requires("tpa"))
                 .then(Commands.argument("player", EntityArgument.player())
                         .executes(ctx -> sendTpa(ctx, false))));
 
         d.register(Commands.literal("tpahere")
+                .requires(FeatureGate.requires("tpa"))
                 .then(Commands.argument("player", EntityArgument.player())
                         .executes(ctx -> sendTpa(ctx, true))));
 
-        d.register(Commands.literal("tpaccept").executes(ModCommands::tpAccept));
-        d.register(Commands.literal("tpdeny").executes(ModCommands::tpDeny));
+        d.register(Commands.literal("tpaccept")
+                .requires(FeatureGate.requires("tpa"))
+                .executes(ModCommands::tpAccept));
+        d.register(Commands.literal("tpdeny")
+                .requires(FeatureGate.requires("tpa"))
+                .executes(ModCommands::tpDeny));
     }
 
     private static int sendTpa(CommandContext<CommandSourceStack> ctx, boolean tpaHere)
@@ -236,8 +249,12 @@ public final class ModCommands {
     // ═════════════════════════════════════════════════════════════════════════
 
     private static void registerBack(CommandDispatcher<CommandSourceStack> d) {
-        d.register(Commands.literal("back").executes(ModCommands::back));
-        d.register(Commands.literal("backdeath").executes(ModCommands::backDeath));
+        d.register(Commands.literal("back")
+                .requires(FeatureGate.requires("back"))
+                .executes(ModCommands::back));
+        d.register(Commands.literal("backdeath")
+                .requires(FeatureGate.requires("back"))
+                .executes(ModCommands::backDeath));
     }
 
     private static int back(CommandContext<CommandSourceStack> ctx) {
@@ -294,19 +311,22 @@ public final class ModCommands {
 
     private static void registerWarps(CommandDispatcher<CommandSourceStack> d) {
         d.register(Commands.literal("warp")
+                .requires(FeatureGate.requires("warps"))
                 .then(Commands.argument("name", StringArgumentType.word())
                         .executes(ctx -> teleportWarp(ctx, StringArgumentType.getString(ctx, "name"))))
                 .executes(ModCommands::listWarps));
 
-        d.register(Commands.literal("warps").executes(ModCommands::listWarps));
+        d.register(Commands.literal("warps")
+                .requires(FeatureGate.requires("warps"))
+                .executes(ModCommands::listWarps));
 
         d.register(Commands.literal("setwarp")
-                .requires(s -> s.hasPermission(3))
+                .requires(FeatureGate.requires("warps", s -> s.hasPermission(3)))
                 .then(Commands.argument("name", StringArgumentType.word())
                         .executes(ctx -> setWarp(ctx, StringArgumentType.getString(ctx, "name")))));
 
         d.register(Commands.literal("delwarp")
-                .requires(s -> s.hasPermission(3))
+                .requires(FeatureGate.requires("warps", s -> s.hasPermission(3)))
                 .then(Commands.argument("name", StringArgumentType.word())
                         .executes(ctx -> deleteWarp(ctx, StringArgumentType.getString(ctx, "name")))));
     }
@@ -396,11 +416,28 @@ public final class ModCommands {
 
     private static void registerKits(CommandDispatcher<CommandSourceStack> d) {
         d.register(Commands.literal("kit")
+                .requires(FeatureGate.requires("kits"))
+                .then(Commands.literal("reload")
+                        .requires(s -> s.hasPermission(3))
+                        .executes(ModCommands::reloadKits))
                 .then(Commands.argument("name", StringArgumentType.word())
                         .executes(ctx -> kitCommand(ctx, StringArgumentType.getString(ctx, "name"))))
                 .executes(ModCommands::listKits));
 
-        d.register(Commands.literal("kits").executes(ModCommands::listKits));
+        d.register(Commands.literal("kits")
+                .requires(FeatureGate.requires("kits"))
+                .executes(ModCommands::listKits));
+    }
+
+    private static int reloadKits(CommandContext<CommandSourceStack> ctx) {
+        MinecraftServer server = ctx.getSource().getServer();
+        VonixServerUtilities.dbAsync(() -> {
+            KitManager.getInstance().reloadFromJson(server);
+            int n = KitManager.getInstance().getKitNames().size();
+            server.execute(() -> ctx.getSource().sendSuccess(
+                    () -> Component.literal("§a[VSU] Reloaded kits.json — §e" + n + "§a kits loaded."), true));
+        });
+        return 1;
     }
 
     private static int kitCommand(CommandContext<CommandSourceStack> ctx, String name) {
@@ -447,7 +484,7 @@ public final class ModCommands {
 
     private static void registerAdmin(CommandDispatcher<CommandSourceStack> d) {
         d.register(Commands.literal("heal")
-                .requires(s -> s.hasPermission(2))
+                .requires(FeatureGate.requires("admin_tools", s -> s.hasPermission(2)))
                 .executes(ctx -> {
                     ServerPlayer p = ctx.getSource().getPlayer();
                     if (p != null) AdminManager.getInstance().healPlayer(p);
@@ -463,7 +500,7 @@ public final class ModCommands {
                         })));
 
         d.register(Commands.literal("feed")
-                .requires(s -> s.hasPermission(2))
+                .requires(FeatureGate.requires("admin_tools", s -> s.hasPermission(2)))
                 .executes(ctx -> {
                     ServerPlayer p = ctx.getSource().getPlayer();
                     if (p != null) AdminManager.getInstance().feedPlayer(p);
@@ -479,7 +516,7 @@ public final class ModCommands {
                         })));
 
         d.register(Commands.literal("fly")
-                .requires(s -> s.hasPermission(2))
+                .requires(FeatureGate.requires("admin_tools", s -> s.hasPermission(2)))
                 .executes(ctx -> {
                     ServerPlayer p = ctx.getSource().getPlayer();
                     if (p != null) AdminManager.getInstance().toggleFly(p);
@@ -492,7 +529,7 @@ public final class ModCommands {
                         })));
 
         d.register(Commands.literal("god")
-                .requires(s -> s.hasPermission(2))
+                .requires(FeatureGate.requires("admin_tools", s -> s.hasPermission(2)))
                 .executes(ctx -> {
                     ServerPlayer p = ctx.getSource().getPlayer();
                     if (p != null) AdminManager.getInstance().toggleGodMode(p);
@@ -500,7 +537,7 @@ public final class ModCommands {
                 }));
 
         d.register(Commands.literal("vanish")
-                .requires(s -> s.hasPermission(2))
+                .requires(FeatureGate.requires("admin_tools", s -> s.hasPermission(2)))
                 .executes(ctx -> {
                     ServerPlayer p = ctx.getSource().getPlayer();
                     if (p != null) AdminManager.getInstance().toggleVanish(p, ctx.getSource().getServer());
@@ -508,7 +545,7 @@ public final class ModCommands {
                 }));
 
         d.register(Commands.literal("gm")
-                .requires(s -> s.hasPermission(2))
+                .requires(FeatureGate.requires("admin_tools", s -> s.hasPermission(2)))
                 .then(Commands.literal("0").executes(ctx -> setGameMode(ctx, net.minecraft.world.level.GameType.SURVIVAL)))
                 .then(Commands.literal("1").executes(ctx -> setGameMode(ctx, net.minecraft.world.level.GameType.CREATIVE)))
                 .then(Commands.literal("2").executes(ctx -> setGameMode(ctx, net.minecraft.world.level.GameType.ADVENTURE)))
@@ -533,7 +570,9 @@ public final class ModCommands {
     // ═════════════════════════════════════════════════════════════════════════
 
     private static void registerSpawn(CommandDispatcher<CommandSourceStack> d) {
-        d.register(Commands.literal("spawn").executes(ctx -> {
+        d.register(Commands.literal("spawn")
+                .requires(FeatureGate.requires("spawn"))
+                .executes(ctx -> {
             ServerPlayer p = ctx.getSource().getPlayer();
             if (p == null) return 0;
             var spawnPos = ctx.getSource().getServer().overworld().getSharedSpawnPos();
@@ -556,6 +595,7 @@ public final class ModCommands {
                 .then(Commands.literal("status").executes(ModCommands::showStatus))
                 .then(Commands.literal("reload")
                         .executes(ModCommands::reloadConfig))
+                .then(FeatureCommand.tree())
                 .executes(ModCommands::showHelp));
     }
 
@@ -573,13 +613,30 @@ public final class ModCommands {
         ctx.getSource().sendSuccess(
                 () -> Component.literal("§6[VSU] §fStatus: §aOnline §7(" + players + "/" + max + ")"), false);
         ctx.getSource().sendSuccess(
-                () -> Component.literal("§7Modules: homes, warps, kits, TPA, back, admin, world"), false);
+                () -> Component.literal("§7Modules: homes, warps, kits, TPA, back, admin, world, venary"), false);
+        // Venary integration status (masked secrets).
+        LinkCommands.appendStatusLines(ctx.getSource());
+        // Feature flag summary.
+        ctx.getSource().sendSuccess(() -> Component.literal(FeatureCommand.summaryLine()), false);
         return 1;
     }
 
     private static int reloadConfig(CommandContext<CommandSourceStack> ctx) {
-        ctx.getSource().sendSuccess(
-                () -> Component.literal("§e[VSU] Config reloads require a server restart."), true);
+        try {
+            boolean ok = ModConfig.INSTANCE.reload();
+            // Re-init the Venary client with the freshly-loaded settings.
+            network.vonix.serverutilities.venary.VenaryClient.init(ModConfig.INSTANCE.getVenaryConfig());
+            // Reload kits.json so operators can hot-edit kit definitions too.
+            try { KitManager.getInstance().reloadFromJson(ctx.getSource().getServer()); } catch (Throwable ignore) {}
+            if (ok) ctx.getSource().sendSuccess(
+                    () -> Component.literal("§a[VSU] Configuration reloaded."), true);
+            else ctx.getSource().sendFailure(
+                    Component.literal("§c[VSU] Reload failed — config not initialised."));
+        } catch (Exception e) {
+            VonixServerUtilities.LOGGER.error("[VonixSU] /vonixsu reload failed", e);
+            ctx.getSource().sendFailure(
+                    Component.literal("§c[VSU] Reload threw: " + e.getMessage()));
+        }
         return 1;
     }
 
@@ -588,6 +645,7 @@ public final class ModCommands {
         ctx.getSource().sendSuccess(() -> Component.literal("§e/vonixsu version §7— show version"), false);
         ctx.getSource().sendSuccess(() -> Component.literal("§e/vonixsu status  §7— show server status"), false);
         ctx.getSource().sendSuccess(() -> Component.literal("§e/vonixsu reload  §7— reload info"), false);
+        ctx.getSource().sendSuccess(() -> Component.literal("§e/vonixsu feature [list|enable|disable|reload|status] §7— manage feature flags"), false);
         return 1;
     }
 }

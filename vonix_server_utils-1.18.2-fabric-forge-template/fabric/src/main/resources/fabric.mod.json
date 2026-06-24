@@ -20,7 +20,7 @@
     ]
   },
   "mixins": [
-    "vonix_server_utils.mixins.json"
+    "vonix_server_utilities.mixins.json"
   ],
   "depends": {
     "fabricloader": ">=0.19.2",
@@ -30,7 +30,7 @@
     "fabric-api": "*"
   },
   "suggests": {
-    "another-mod": "*"
+    "luckperms": "*"
   }
 }
 

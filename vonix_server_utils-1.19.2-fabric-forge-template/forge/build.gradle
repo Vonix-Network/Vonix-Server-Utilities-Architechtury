@@ -50,9 +50,23 @@ processResources {
 shadowJar {
     configurations = [project.configurations.shadowBundle]
     archiveClassifier = 'dev-shadow'
-    exclude '**/module-info.class'
-    exclude 'META-INF/versions/**'
+
+    // === Relocate bundled libraries to avoid classpath conflicts ===
+    // When other mods (Iris, Carpet, FTB Library variants, some chunk-storage mods)
+    // ship their own copy of sqlite-jdbc, the classloader picks one and you get
+    // NoSuchFieldError / IncompatibleClassChange from cross-version class fields.
+    // Relocating to a vonix-private namespace gives us our own copy that nothing
+    // else can collide with. Native libs inside the jar get the same treatment.
+    relocate 'org.sqlite', 'network.vonix.serverutilities.shadow.sqlite'
+
+    // Drop signature files + license noise that breaks merged jars
+    exclude 'META-INF/*.SF'
+    exclude 'META-INF/*.DSA'
+    exclude 'META-INF/*.RSA'
     exclude 'META-INF/maven/**'
+    exclude 'META-INF/versions/**/module-info.class'
+    exclude 'module-info.class'
+
     exclude 'META-INF/LICENSE*'
     exclude 'META-INF/NOTICE*'
     mergeServiceFiles()

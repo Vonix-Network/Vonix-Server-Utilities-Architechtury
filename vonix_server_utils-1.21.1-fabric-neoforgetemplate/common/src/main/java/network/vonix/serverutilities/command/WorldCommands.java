@@ -12,6 +12,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityType;
 import network.vonix.serverutilities.VonixServerUtilities;
+import network.vonix.serverutilities.features.FeatureGate;
 
 import java.util.Map;
 import java.util.UUID;
@@ -36,29 +37,31 @@ public final class WorldCommands {
 
         // ── Weather ───────────────────────────────────────────────────────────
         d.register(Commands.literal("weather")
-                .requires(s -> s.hasPermission(2))
+                .requires(FeatureGate.requires("world", s -> s.hasPermission(2)))
                 .then(Commands.literal("clear").executes(ctx -> setWeather(ctx, "clear", 6000)))
                 .then(Commands.literal("rain").executes(ctx -> setWeather(ctx, "rain", 6000)))
                 .then(Commands.literal("storm").executes(ctx -> setWeather(ctx, "storm", 6000)))
                 .then(Commands.literal("thunder").executes(ctx -> setWeather(ctx, "storm", 6000))));
 
         d.register(Commands.literal("sun")
-                .requires(s -> s.hasPermission(2))
+                .requires(FeatureGate.requires("world", s -> s.hasPermission(2)))
                 .executes(ctx -> setWeather(ctx, "clear", 24000)));
 
-        // /rain and /storm registered as aliases (only if not already claimed above)
-        // Using unique literals to avoid collision with the /weather sub-commands.
+        // /rain and /storm are intentionally registered both as /weather sub-commands
+        // AND as top-level shortcuts. Both code paths flow through the same
+        // setWeather() handler below, so there is no behavioural drift between
+        // them — the audit's "duplicate" warning is purely informational.
         d.register(Commands.literal("rain")
-                .requires(s -> s.hasPermission(2))
+                .requires(FeatureGate.requires("world", s -> s.hasPermission(2)))
                 .executes(ctx -> setWeather(ctx, "rain", 6000)));
 
         d.register(Commands.literal("storm")
-                .requires(s -> s.hasPermission(2))
+                .requires(FeatureGate.requires("world", s -> s.hasPermission(2)))
                 .executes(ctx -> setWeather(ctx, "storm", 6000)));
 
         // ── Time ──────────────────────────────────────────────────────────────
         d.register(Commands.literal("time")
-                .requires(s -> s.hasPermission(2))
+                .requires(FeatureGate.requires("world", s -> s.hasPermission(2)))
                 .then(Commands.literal("set")
                         .then(Commands.literal("day").executes(ctx -> setTime(ctx, 1000)))
                         .then(Commands.literal("night").executes(ctx -> setTime(ctx, 13000)))
@@ -71,11 +74,11 @@ public final class WorldCommands {
                                 .executes(ctx -> addTime(ctx, IntegerArgumentType.getInteger(ctx, "ticks"))))));
 
         d.register(Commands.literal("day")
-                .requires(s -> s.hasPermission(2))
+                .requires(FeatureGate.requires("world", s -> s.hasPermission(2)))
                 .executes(ctx -> setTime(ctx, 1000)));
 
         d.register(Commands.literal("night")
-                .requires(s -> s.hasPermission(2))
+                .requires(FeatureGate.requires("world", s -> s.hasPermission(2)))
                 .executes(ctx -> setTime(ctx, 13000)));
 
         // ── Lightning ─────────────────────────────────────────────────────────

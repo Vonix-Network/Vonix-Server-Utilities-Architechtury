@@ -4,6 +4,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import network.vonix.serverutilities.VonixServerUtilities;
 import network.vonix.serverutilities.config.ModConfig;
 
 import java.util.Map;
@@ -21,10 +22,18 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * This means /back always returns to the last *teleport* origin, while /backdeath
  * always returns to the last death spot, and neither can overwrite the other.
+ *
+ * Both stores are write-through cached: the in-memory map answers reads
+ * synchronously while every mutation is also persisted to vsu_back_locations
+ * on the DB executor thread. {@link #hydrateFromDb()} repopulates the cache at
+ * server start so /back and /backdeath survive restarts.
  */
 public final class TeleportManager {
     private static final TeleportManager INSTANCE = new TeleportManager();
     public static TeleportManager getInstance() { return INSTANCE; }
+
+    private static final String KIND_TP    = "tp";
+    private static final String KIND_DEATH = "death";
 
     /** TPA requests keyed by the TARGET player's UUID (the one who accepts/denies). */
     private final Map<UUID, TpaRequest> tpaRequests   = new ConcurrentHashMap<>();
@@ -37,12 +46,48 @@ public final class TeleportManager {
 
     /** Record player's current position as their last teleport origin. */
     public void saveLastLocation(ServerPlayer player) {
-        lastLocations.put(player.getUUID(), snapshot(player));
+        Location loc = snapshot(player);
+        lastLocations.put(player.getUUID(), loc);
+        persist(player.getUUID(), loc, KIND_TP);
     }
 
     /** Record player's current position as their last death location. */
     public void saveDeathLocation(ServerPlayer player) {
-        deathLocations.put(player.getUUID(), snapshot(player));
+        Location loc = snapshot(player);
+        deathLocations.put(player.getUUID(), loc);
+        persist(player.getUUID(), loc, KIND_DEATH);
+    }
+
+    private static void persist(UUID uuid, Location loc, String kind) {
+        VonixServerUtilities.dbAsync(() ->
+                VonixServerUtilities.getInstance().getDatabase().setBackLocation(
+                        uuid, loc.world(), loc.x(), loc.y(), loc.z(),
+                        loc.yaw(), loc.pitch(), kind));
+    }
+
+    /**
+     * Rehydrate the in-memory caches from vsu_back_locations.
+     * Call once per server start, from the DB executor thread.
+     */
+    public void hydrateFromDb() {
+        try {
+            for (Object[] row : VonixServerUtilities.getInstance().getDatabase().getAllBackLocations()) {
+                UUID uuid    = UUID.fromString((String) row[0]);
+                String world = (String) row[1];
+                double x = (Double) row[2], y = (Double) row[3], z = (Double) row[4];
+                float yaw = (Float) row[5], pitch = (Float) row[6];
+                String kind = (String) row[7];
+                long ts     = (Long) row[8];
+                Location loc = new Location(world, x, y, z, yaw, pitch, ts);
+                if (KIND_DEATH.equals(kind)) deathLocations.put(uuid, loc);
+                else                          lastLocations.put(uuid, loc);
+            }
+            VonixServerUtilities.LOGGER.info(
+                    "[VonixSU] Hydrated {} /back + {} /backdeath locations from DB.",
+                    lastLocations.size(), deathLocations.size());
+        } catch (Exception e) {
+            VonixServerUtilities.LOGGER.error("[VonixSU] hydrateFromDb failed", e);
+        }
     }
 
     private static Location snapshot(ServerPlayer p) {
@@ -138,11 +183,13 @@ public final class TeleportManager {
         deathLocations.clear();
     }
 
-    /** Clear in-memory state for a single player. Call on player disconnect. */
+    /** Clear in-memory state for a single player. Call on player disconnect.
+     *  NOTE: back/death locations stay in lastLocations/deathLocations because
+     *  they are also persisted to vsu_back_locations and will be re-hydrated
+     *  on the next join; we only drop transient TPA state here.
+     */
     public void clearPlayer(UUID uuid) {
         tpaRequests.remove(uuid);
-        lastLocations.remove(uuid);
-        deathLocations.remove(uuid);
     }
 
     // ── Records ───────────────────────────────────────────────────────────────

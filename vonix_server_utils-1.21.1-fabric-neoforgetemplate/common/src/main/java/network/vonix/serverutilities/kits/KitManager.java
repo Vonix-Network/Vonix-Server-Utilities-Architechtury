@@ -1,17 +1,36 @@
 package network.vonix.serverutilities.kits;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import network.vonix.serverutilities.VonixServerUtilities;
 
+import java.io.IOException;
+import java.io.Reader;
+import java.io.Writer;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.*;
 import java.util.*;
 
 /**
  * Manages kits — predefined item sets players can claim with cooldowns.
+ *
+ * Kit definitions live in {@code config/vonix_server_utilities/kits.json}. On
+ * first launch the file is seeded with three default kits (starter / tools /
+ * food); thereafter operators edit the JSON directly and run
+ * {@code /vonixsu reload} (or {@code /kit reload}) to apply changes without
+ * restarting.
  *
  * The eligibility check (DB read + write) is done on the DB thread via
  * {@link #checkAndClaim(UUID, String)}; item distribution is done on the
@@ -22,35 +41,173 @@ public final class KitManager {
     private static final KitManager INSTANCE = new KitManager();
     public static KitManager getInstance() { return INSTANCE; }
 
+    private static final Path KITS_PATH =
+            Paths.get("config", "vonix_server_utilities", "kits.json");
+
+    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+
     private final Map<String, Kit> kits = new LinkedHashMap<>();
 
-    private KitManager() { loadDefaultKits(); }
+    private KitManager() { /* loadFromJson invoked by EventHandler at SERVER_STARTING */ }
 
-    private void loadDefaultKits() {
-        register(new Kit("starter", List.of(
-                new KitItem("minecraft:stone_sword",    1),
-                new KitItem("minecraft:stone_pickaxe",  1),
-                new KitItem("minecraft:stone_axe",      1),
-                new KitItem("minecraft:bread",          16),
-                new KitItem("minecraft:torch",          32)),
-                3600, false));
-
-        register(new Kit("tools", List.of(
-                new KitItem("minecraft:iron_pickaxe",   1),
-                new KitItem("minecraft:iron_axe",       1),
-                new KitItem("minecraft:iron_shovel",    1),
-                new KitItem("minecraft:iron_hoe",       1)),
-                7200, false));
-
-        register(new Kit("food", List.of(
-                new KitItem("minecraft:cooked_beef",    32),
-                new KitItem("minecraft:golden_apple",   2),
-                new KitItem("minecraft:cake",           1)),
-                1800, false));
+    /** Load kit definitions from disk. Writes a default file on first launch. */
+    public void loadFromJson(MinecraftServer server) {
+        try {
+            Files.createDirectories(KITS_PATH.getParent());
+            if (!Files.exists(KITS_PATH)) {
+                writeDefaultsFile();
+                VonixServerUtilities.LOGGER.info(
+                        "[VonixSU] Created default kits.json at {}", KITS_PATH.toAbsolutePath());
+            }
+            parseKitsFile();
+        } catch (Exception e) {
+            VonixServerUtilities.LOGGER.error("[VonixSU] Failed to load kits.json, falling back to in-memory defaults", e);
+            kits.clear();
+            seedHardcodedDefaults();
+        }
     }
 
-    /** Register a custom kit (replace if same name exists). */
+    /** Re-read kits.json. Triggered by /kit reload and /vonixsu reload. */
+    public void reloadFromJson(MinecraftServer server) {
+        VonixServerUtilities.LOGGER.info("[VonixSU] Reloading kits.json…");
+        loadFromJson(server);
+    }
+
+    private void parseKitsFile() throws IOException {
+        try (Reader r = Files.newBufferedReader(KITS_PATH)) {
+            JsonElement root = JsonParser.parseReader(r);
+            if (!root.isJsonObject()) {
+                VonixServerUtilities.LOGGER.warn("[VonixSU] kits.json: root is not an object — using defaults");
+                seedHardcodedDefaults();
+                return;
+            }
+            JsonObject obj = root.getAsJsonObject();
+            JsonArray arr = obj.has("kits") && obj.get("kits").isJsonArray()
+                    ? obj.getAsJsonArray("kits") : new JsonArray();
+
+            Map<String, Kit> next = new LinkedHashMap<>();
+            for (JsonElement el : arr) {
+                if (!el.isJsonObject()) continue;
+                JsonObject k = el.getAsJsonObject();
+                String name = k.has("name") ? k.get("name").getAsString() : null;
+                if (name == null || name.isBlank()) {
+                    VonixServerUtilities.LOGGER.warn("[VonixSU] kits.json: skipping nameless entry");
+                    continue;
+                }
+                int cooldown = k.has("cooldown_seconds") ? k.get("cooldown_seconds").getAsInt() : 3600;
+                boolean oneTime = k.has("one_time") && k.get("one_time").getAsBoolean();
+
+                List<KitItem> items = new ArrayList<>();
+                if (k.has("items") && k.get("items").isJsonArray()) {
+                    for (JsonElement iEl : k.getAsJsonArray("items")) {
+                        if (!iEl.isJsonObject()) continue;
+                        JsonObject io = iEl.getAsJsonObject();
+                        String itemId = io.has("item") ? io.get("item").getAsString() : null;
+                        int count = io.has("count") ? io.get("count").getAsInt() : 1;
+                        if (itemId == null) continue;
+                        if (!isValidItemId(itemId)) {
+                            VonixServerUtilities.LOGGER.warn(
+                                    "[VonixSU] kits.json: kit '{}' references unknown item '{}' — skipping that item.",
+                                    name, itemId);
+                            continue;
+                        }
+                        items.add(new KitItem(itemId, count));
+                    }
+                }
+                next.put(name.toLowerCase(), new Kit(name.toLowerCase(), items, cooldown, oneTime));
+            }
+            kits.clear();
+            kits.putAll(next);
+            VonixServerUtilities.LOGGER.info("[VonixSU] Loaded {} kits from kits.json.", kits.size());
+        }
+    }
+
+    private static boolean isValidItemId(String id) {
+        try {
+            ResourceLocation rl = ResourceLocation.tryParse(id);
+            if (rl == null) return false;
+            return BuiltInRegistries.ITEM.get(rl) != Items.AIR || "minecraft:air".equals(id);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private void writeDefaultsFile() throws IOException {
+        // Mirror the three legacy hard-coded defaults exactly.
+        JsonObject root = new JsonObject();
+        JsonArray arr = new JsonArray();
+        arr.add(makeKitJson("starter", 3600, false, new String[][]{
+                {"minecraft:stone_sword",    "1"},
+                {"minecraft:stone_pickaxe",  "1"},
+                {"minecraft:stone_axe",      "1"},
+                {"minecraft:bread",         "16"},
+                {"minecraft:torch",         "32"},
+        }));
+        arr.add(makeKitJson("tools", 7200, false, new String[][]{
+                {"minecraft:iron_pickaxe", "1"},
+                {"minecraft:iron_axe",     "1"},
+                {"minecraft:iron_shovel",  "1"},
+                {"minecraft:iron_hoe",     "1"},
+        }));
+        arr.add(makeKitJson("food", 1800, false, new String[][]{
+                {"minecraft:cooked_beef",  "32"},
+                {"minecraft:golden_apple",  "2"},
+                {"minecraft:cake",          "1"},
+        }));
+        root.add("kits", arr);
+        try (Writer w = Files.newBufferedWriter(KITS_PATH)) {
+            GSON.toJson(root, w);
+        }
+    }
+
+    private static JsonObject makeKitJson(String name, int cd, boolean oneTime, String[][] items) {
+        JsonObject k = new JsonObject();
+        k.addProperty("name", name);
+        k.addProperty("cooldown_seconds", cd);
+        k.addProperty("one_time", oneTime);
+        JsonArray arr = new JsonArray();
+        for (String[] it : items) {
+            JsonObject io = new JsonObject();
+            io.addProperty("item", it[0]);
+            io.addProperty("count", Integer.parseInt(it[1]));
+            arr.add(io);
+        }
+        k.add("items", arr);
+        return k;
+    }
+
+    /** Fallback used only if kits.json is broken and unrecoverable. */
+    private void seedHardcodedDefaults() {
+        register(new Kit("starter", List.of(
+                new KitItem("minecraft:stone_sword", 1),
+                new KitItem("minecraft:stone_pickaxe", 1),
+                new KitItem("minecraft:stone_axe", 1),
+                new KitItem("minecraft:bread", 16),
+                new KitItem("minecraft:torch", 32)), 3600, false));
+        register(new Kit("tools", List.of(
+                new KitItem("minecraft:iron_pickaxe", 1),
+                new KitItem("minecraft:iron_axe", 1),
+                new KitItem("minecraft:iron_shovel", 1),
+                new KitItem("minecraft:iron_hoe", 1)), 7200, false));
+        register(new Kit("food", List.of(
+                new KitItem("minecraft:cooked_beef", 32),
+                new KitItem("minecraft:golden_apple", 2),
+                new KitItem("minecraft:cake", 1)), 1800, false));
+    }
+
+    /** Register a custom kit (replace if same name exists). Kept for tests + hard-coded fallback. */
     public void register(Kit kit) { kits.put(kit.name().toLowerCase(), kit); }
+
+    /** Test-friendly overload: register a kit purely from an ItemStack list. */
+    public void register(String name, ItemStack... stacks) {
+        List<KitItem> items = new ArrayList<>(stacks.length);
+        for (ItemStack s : stacks) {
+            if (s == null || s.isEmpty()) continue;
+            ResourceLocation id = BuiltInRegistries.ITEM.getKey(s.getItem());
+            items.add(new KitItem(id.toString(), s.getCount()));
+        }
+        register(new Kit(name.toLowerCase(), items, 3600, false));
+    }
 
     // ── DB-thread operations ──────────────────────────────────────────────────
 

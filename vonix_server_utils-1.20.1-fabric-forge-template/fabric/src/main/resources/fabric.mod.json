@@ -26,6 +26,9 @@
     "java": ">=17",
     "architectury": ">=9.2.14",
     "fabric-api": "*"
+  },
+  "suggests": {
+    "luckperms": ">=5.4"
   }
 }
 

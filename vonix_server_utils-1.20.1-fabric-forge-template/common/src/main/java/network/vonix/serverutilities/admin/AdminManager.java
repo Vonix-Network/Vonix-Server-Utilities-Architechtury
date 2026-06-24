@@ -33,7 +33,7 @@ public final class AdminManager {
             for (ServerPlayer other : server.getPlayerList().getPlayers()) {
                 if (!other.equals(player)) {
                     other.connection.send(new ClientboundPlayerInfoUpdatePacket(
-                            ClientboundPlayerInfoUpdatePacket.Action.ADD_PLAYER, player));
+                            EnumSet.of(ClientboundPlayerInfoUpdatePacket.Action.ADD_PLAYER), List.of(player)));
                 }
             }
             player.sendSystemMessage(Component.literal("Â§a[VSU] You are now visible."));

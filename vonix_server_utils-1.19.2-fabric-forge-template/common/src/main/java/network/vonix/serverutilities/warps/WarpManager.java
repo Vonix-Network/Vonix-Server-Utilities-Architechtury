@@ -48,7 +48,7 @@ public final class WarpManager {
     /** Convenience overload that captures player position on the caller's thread. */
     public boolean setWarp(String name, ServerPlayer player) {
         return setWarp(name, player.getUUID(),
-                player.level.dimension().location().toString(),
+                player.getLevel().dimension().location().toString(),
                 player.getX(), player.getY(), player.getZ(),
                 player.getYRot(), player.getXRot());
     }

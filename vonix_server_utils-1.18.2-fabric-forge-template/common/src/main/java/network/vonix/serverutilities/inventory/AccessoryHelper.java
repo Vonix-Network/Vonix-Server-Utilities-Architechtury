@@ -1,4 +1,5 @@
 package network.vonix.serverutilities.inventory;
+
 import net.minecraft.server.level.ServerPlayer;
 import dev.architectury.injectables.annotations.ExpectPlatform;
 

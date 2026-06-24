@@ -4,7 +4,7 @@ plugins {
 
 loom {
     forge {
-        mixinConfig "vonix_server_utils.mixins.json"
+        mixinConfig "vonix_server_utilities.mixins.json"
     }
 }
 
@@ -58,6 +58,33 @@ processResources {
 shadowJar {
     configurations = [project.configurations.shadowBundle]
     archiveClassifier = 'dev-shadow'
+
+    // === Relocate bundled libraries to avoid classpath conflicts ===
+    // NOTE: sqlite-jdbc must NOT be relocated. Its native library (libsqlitejdbc.so)
+    // exports JNI symbols hardwired to the original `org.sqlite.core.NativeDB` class
+    // name. Shadow rewrites the Java class names but cannot rename the JNI symbols
+    // baked into the compiled .so, so a relocated NativeDB fails to bind at runtime:
+    //   java.lang.NoClassDefFoundError: org/sqlite/core/NativeDB
+    // (observed on the HTTYD 1.18.2 boot test during VSU Database.init). Forge already
+    // isolates each mod in its own module classloader, so leaving sqlite-jdbc under its
+    // real `org.sqlite` name does not collide with other mods that bundle it.
+    // Therefore: do NOT add `relocate 'org.sqlite', ...` here.
+    //
+    // SLF4J is bundled by the shadowBundle config; exporting org.slf4j(.event)
+    // collides with other modpack mods that bundle their own SLF4J and breaks
+    // the JVM module layer (ResolutionException ... exports org.slf4j.event).
+    // Relocate it into our private namespace like sqlite-jdbc.
+    relocate 'org.slf4j', 'network.vonix.serverutilities.shadow.slf4j'
+
+    // Drop signature files + license noise that breaks merged jars
+    exclude 'META-INF/*.SF'
+    exclude 'META-INF/*.DSA'
+    exclude 'META-INF/*.RSA'
+    exclude 'META-INF/maven/**'
+    exclude 'META-INF/versions/**/module-info.class'
+    exclude 'module-info.class'
+
+    mergeServiceFiles()
 }
 
 remapJar {

@@ -14,6 +14,7 @@ import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import network.vonix.serverutilities.VonixServerUtilities;
+import network.vonix.serverutilities.features.FeatureGate;
 import network.vonix.serverutilities.inventory.InvseeContainer;
 import network.vonix.serverutilities.inventory.AccessoryHelper;
 import network.vonix.serverutilities.teleport.TeleportManager;
@@ -53,7 +54,7 @@ public final class UtilityCommands {
     private static void registerTeleportCommands(CommandDispatcher<CommandSourceStack> d) {
         // /tp <player>  or  /tp <target> <destination>
         d.register(Commands.literal("tp")
-                .requires(s -> s.hasPermission(2))
+                .requires(FeatureGate.requires("teleport_admin", s -> s.hasPermission(2)))
                 .then(Commands.argument("target", EntityArgument.player())
                         .executes(ctx -> teleportTo(ctx, EntityArgument.getPlayer(ctx, "target")))
                         .then(Commands.argument("destination", EntityArgument.player())
@@ -63,18 +64,18 @@ public final class UtilityCommands {
 
         // /tphere <player>
         d.register(Commands.literal("tphere")
-                .requires(s -> s.hasPermission(2))
+                .requires(FeatureGate.requires("teleport_admin", s -> s.hasPermission(2)))
                 .then(Commands.argument("target", EntityArgument.player())
                         .executes(ctx -> teleportHere(ctx, EntityArgument.getPlayer(ctx, "target")))));
 
         // /tpall
         d.register(Commands.literal("tpall")
-                .requires(s -> s.hasPermission(2))
+                .requires(FeatureGate.requires("teleport_admin", s -> s.hasPermission(2)))
                 .executes(UtilityCommands::teleportAll));
 
         // /tppos <x> <y> <z>
         d.register(Commands.literal("tppos")
-                .requires(s -> s.hasPermission(2))
+                .requires(FeatureGate.requires("teleport_admin", s -> s.hasPermission(2)))
                 .then(Commands.argument("x", DoubleArgumentType.doubleArg())
                         .then(Commands.argument("y", DoubleArgumentType.doubleArg())
                                 .then(Commands.argument("z", DoubleArgumentType.doubleArg())
@@ -82,7 +83,7 @@ public final class UtilityCommands {
 
         // /setspawn
         d.register(Commands.literal("setspawn")
-                .requires(s -> s.hasPermission(2))
+                .requires(FeatureGate.requires("spawn", s -> s.hasPermission(2)))
                 .executes(UtilityCommands::setSpawn));
     }
 
@@ -161,36 +162,53 @@ public final class UtilityCommands {
 
     private static void registerPlayerUtilityCommands(CommandDispatcher<CommandSourceStack> d) {
         d.register(Commands.literal("nick")
+                .requires(FeatureGate.requires("utility"))
                 .then(Commands.argument("name", StringArgumentType.greedyString())
                         .executes(ctx -> setNickname(ctx, StringArgumentType.getString(ctx, "name"))))
                 .executes(UtilityCommands::clearNickname));
 
         d.register(Commands.literal("seen")
+                .requires(FeatureGate.requires("utility"))
                 .then(Commands.argument("player", StringArgumentType.word())
                         .executes(ctx -> showSeen(ctx, StringArgumentType.getString(ctx, "player")))));
 
         d.register(Commands.literal("whois")
-                .requires(s -> s.hasPermission(2))
+                .requires(FeatureGate.requires("utility", s -> s.hasPermission(2)))
                 .then(Commands.argument("target", EntityArgument.player())
                         .executes(ctx -> showWhois(ctx, EntityArgument.getPlayer(ctx, "target")))));
 
-        d.register(Commands.literal("ping").executes(UtilityCommands::showPing));
+        d.register(Commands.literal("ping")
+                .requires(FeatureGate.requires("utility"))
+                .executes(UtilityCommands::showPing));
 
         d.register(Commands.literal("near")
+                .requires(FeatureGate.requires("utility"))
                 .executes(ctx -> showNear(ctx, 100))
                 .then(Commands.argument("radius", IntegerArgumentType.integer(1, 500))
                         .executes(ctx -> showNear(ctx, IntegerArgumentType.getInteger(ctx, "radius")))));
 
-        d.register(Commands.literal("getpos").executes(UtilityCommands::getPos));
-        d.register(Commands.literal("playtime").executes(UtilityCommands::showPlaytime));
-        d.register(Commands.literal("suicide").executes(UtilityCommands::suicide));
-        d.register(Commands.literal("list").executes(UtilityCommands::showPlayerList));
+        d.register(Commands.literal("getpos")
+                .requires(FeatureGate.requires("utility"))
+                .executes(UtilityCommands::getPos));
+        d.register(Commands.literal("playtime")
+                .requires(FeatureGate.requires("utility"))
+                .executes(UtilityCommands::showPlaytime));
+        d.register(Commands.literal("suicide")
+                .requires(FeatureGate.requires("utility"))
+                .executes(UtilityCommands::suicide));
+        d.register(Commands.literal("list")
+                .requires(FeatureGate.requires("utility"))
+                .executes(UtilityCommands::showPlayerList));
     }
 
     private static int setNickname(CommandContext<CommandSourceStack> ctx, String name) {
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
         String colored = name.replace("&", "§");
-        nicknames.put(player.getUUID(), colored);
+        UUID uuid = player.getUUID();
+        nicknames.put(uuid, colored);
+        // Write-through to SQLite on the DB executor.
+        VonixServerUtilities.dbAsync(() ->
+                VonixServerUtilities.getInstance().getDatabase().setNickname(uuid, colored));
         player.setCustomName(Component.literal(colored));
         player.setCustomNameVisible(false);
         broadcastTabListUpdate(player);
@@ -200,7 +218,10 @@ public final class UtilityCommands {
 
     private static int clearNickname(CommandContext<CommandSourceStack> ctx) {
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
-        nicknames.remove(player.getUUID());
+        UUID uuid = player.getUUID();
+        nicknames.remove(uuid);
+        VonixServerUtilities.dbAsync(() ->
+                VonixServerUtilities.getInstance().getDatabase().deleteNickname(uuid));
         player.setCustomName(null);
         broadcastTabListUpdate(player);
         player.sendSystemMessage(Component.literal("§aNickname cleared."));
@@ -315,6 +336,7 @@ public final class UtilityCommands {
 
     private static void registerMessagingCommands(CommandDispatcher<CommandSourceStack> d) {
         d.register(Commands.literal("msg")
+                .requires(FeatureGate.requires("utility"))
                 .then(Commands.argument("target", EntityArgument.player())
                         .then(Commands.argument("message", StringArgumentType.greedyString())
                                 .executes(ctx -> sendMessage(ctx,
@@ -322,6 +344,7 @@ public final class UtilityCommands {
                                         StringArgumentType.getString(ctx, "message"))))));
 
         d.register(Commands.literal("tell")
+                .requires(FeatureGate.requires("utility"))
                 .then(Commands.argument("target", EntityArgument.player())
                         .then(Commands.argument("message", StringArgumentType.greedyString())
                                 .executes(ctx -> sendMessage(ctx,
@@ -329,14 +352,17 @@ public final class UtilityCommands {
                                         StringArgumentType.getString(ctx, "message"))))));
 
         d.register(Commands.literal("r")
+                .requires(FeatureGate.requires("utility"))
                 .then(Commands.argument("message", StringArgumentType.greedyString())
                         .executes(ctx -> replyMessage(ctx, StringArgumentType.getString(ctx, "message")))));
 
         d.register(Commands.literal("reply")
+                .requires(FeatureGate.requires("utility"))
                 .then(Commands.argument("message", StringArgumentType.greedyString())
                         .executes(ctx -> replyMessage(ctx, StringArgumentType.getString(ctx, "message")))));
 
         d.register(Commands.literal("ignore")
+                .requires(FeatureGate.requires("utility"))
                 .then(Commands.argument("target", EntityArgument.player())
                         .executes(ctx -> toggleIgnore(ctx, EntityArgument.getPlayer(ctx, "target")))));
     }
@@ -375,11 +401,17 @@ public final class UtilityCommands {
 
     private static int toggleIgnore(CommandContext<CommandSourceStack> ctx, ServerPlayer target) {
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
-        Set<UUID> ignored = ignoreList.computeIfAbsent(player.getUUID(), k -> ConcurrentHashMap.newKeySet());
-        if (ignored.remove(target.getUUID())) {
+        UUID owner = player.getUUID();
+        UUID tgt   = target.getUUID();
+        Set<UUID> ignored = ignoreList.computeIfAbsent(owner, k -> ConcurrentHashMap.newKeySet());
+        if (ignored.remove(tgt)) {
+            VonixServerUtilities.dbAsync(() ->
+                    VonixServerUtilities.getInstance().getDatabase().removeIgnore(owner, tgt));
             player.sendSystemMessage(Component.literal("§aNo longer ignoring §e" + target.getName().getString()));
         } else {
-            ignored.add(target.getUUID());
+            ignored.add(tgt);
+            VonixServerUtilities.dbAsync(() ->
+                    VonixServerUtilities.getInstance().getDatabase().addIgnore(owner, tgt));
             player.sendSystemMessage(Component.literal("§cNow ignoring §e" + target.getName().getString()));
         }
         return 1;
@@ -388,20 +420,22 @@ public final class UtilityCommands {
     // ── Item commands ─────────────────────────────────────────────────────────
 
     private static void registerItemCommands(CommandDispatcher<CommandSourceStack> d) {
-        d.register(Commands.literal("hat").executes(UtilityCommands::wearHat));
+        d.register(Commands.literal("hat")
+                .requires(FeatureGate.requires("utility"))
+                .executes(UtilityCommands::wearHat));
 
         d.register(Commands.literal("more")
-                .requires(s -> s.hasPermission(2))
+                .requires(FeatureGate.requires("utility", s -> s.hasPermission(2)))
                 .executes(UtilityCommands::moreItems));
 
         d.register(Commands.literal("clear")
-                .requires(s -> s.hasPermission(2))
+                .requires(FeatureGate.requires("utility", s -> s.hasPermission(2)))
                 .executes(ctx -> clearInventory(ctx, null))
                 .then(Commands.argument("target", EntityArgument.player())
                         .executes(ctx -> clearInventory(ctx, EntityArgument.getPlayer(ctx, "target")))));
 
         d.register(Commands.literal("repair")
-                .requires(s -> s.hasPermission(2))
+                .requires(FeatureGate.requires("utility", s -> s.hasPermission(2)))
                 .executes(UtilityCommands::repairItem));
     }
 
@@ -452,46 +486,50 @@ public final class UtilityCommands {
 
     private static void registerServerCommands(CommandDispatcher<CommandSourceStack> d) {
         d.register(Commands.literal("broadcast")
-                .requires(s -> s.hasPermission(2))
+                .requires(FeatureGate.requires("utility", s -> s.hasPermission(2)))
                 .then(Commands.argument("message", StringArgumentType.greedyString())
                         .executes(ctx -> broadcast(ctx, StringArgumentType.getString(ctx, "message")))));
 
         d.register(Commands.literal("bc")
-                .requires(s -> s.hasPermission(2))
+                .requires(FeatureGate.requires("utility", s -> s.hasPermission(2)))
                 .then(Commands.argument("message", StringArgumentType.greedyString())
                         .executes(ctx -> broadcast(ctx, StringArgumentType.getString(ctx, "message")))));
 
         d.register(Commands.literal("gc")
-                .requires(s -> s.hasPermission(2))
+                .requires(FeatureGate.requires("utility", s -> s.hasPermission(2)))
                 .executes(UtilityCommands::showServerStats));
 
-        d.register(Commands.literal("lag").executes(UtilityCommands::showLag));
+        d.register(Commands.literal("lag")
+                .requires(FeatureGate.requires("utility"))
+                .executes(UtilityCommands::showLag));
 
         d.register(Commands.literal("invsee")
-                .requires(s -> s.hasPermission(2))
+                .requires(FeatureGate.requires("utility", s -> s.hasPermission(2)))
                 .then(Commands.argument("target", EntityArgument.player())
                         .executes(ctx -> openInventory(ctx, EntityArgument.getPlayer(ctx, "target")))));
 
         d.register(Commands.literal("backsee")
-                .requires(s -> s.hasPermission(2))
+                .requires(FeatureGate.requires("utility", s -> s.hasPermission(2)))
                 .then(Commands.argument("target", EntityArgument.player())
                         .executes(ctx -> openBackpack(ctx, EntityArgument.getPlayer(ctx, "target")))));
 
         d.register(Commands.literal("accsee")
-                .requires(s -> s.hasPermission(2))
+                .requires(FeatureGate.requires("utility", s -> s.hasPermission(2)))
                 .then(Commands.argument("target", EntityArgument.player())
                         .executes(ctx -> openAccessory(ctx, EntityArgument.getPlayer(ctx, "target")))));
 
         d.register(Commands.literal("enderchest")
-                .requires(s -> s.hasPermission(2))
+                .requires(FeatureGate.requires("utility", s -> s.hasPermission(2)))
                 .executes(ctx -> openEnderChest(ctx, null))
                 .then(Commands.argument("target", EntityArgument.player())
                         .executes(ctx -> openEnderChest(ctx, EntityArgument.getPlayer(ctx, "target")))));
 
-        d.register(Commands.literal("workbench").executes(UtilityCommands::openWorkbench));
+        d.register(Commands.literal("workbench")
+                .requires(FeatureGate.requires("utility"))
+                .executes(UtilityCommands::openWorkbench));
 
         d.register(Commands.literal("anvil")
-                .requires(s -> s.hasPermission(2))
+                .requires(FeatureGate.requires("utility", s -> s.hasPermission(2)))
                 .executes(UtilityCommands::openAnvil));
     }
 
@@ -616,14 +654,51 @@ public final class UtilityCommands {
 
     // ── Lifecycle hooks (called from EventHandler) ────────────────────────────
 
+    /**
+     * Rehydrate persisted state into the in-memory caches.
+     * Called once at SERVER_STARTING on the DB executor thread.
+     */
+    public static void hydrateFromDb() {
+        try {
+            var db = VonixServerUtilities.getInstance().getDatabase();
+            for (String[] row : db.getAllNicknames()) {
+                try { nicknames.put(UUID.fromString(row[0]), row[1]); }
+                catch (Exception ignore) {}
+            }
+            for (String[] row : db.getAllIgnores()) {
+                try {
+                    UUID owner  = UUID.fromString(row[0]);
+                    UUID target = UUID.fromString(row[1]);
+                    ignoreList.computeIfAbsent(owner, k -> ConcurrentHashMap.newKeySet()).add(target);
+                } catch (Exception ignore) {}
+            }
+            VonixServerUtilities.LOGGER.info(
+                    "[VonixSU] Hydrated {} nicknames, {} ignore-list owners from DB.",
+                    nicknames.size(), ignoreList.size());
+        } catch (Exception e) {
+            VonixServerUtilities.LOGGER.error("[VonixSU] UtilityCommands.hydrateFromDb failed", e);
+        }
+    }
+
+    public static void onPlayerJoin(ServerPlayer player) {
+        // Re-apply persisted nickname so it survives restarts.
+        String nick = nicknames.get(player.getUUID());
+        if (nick != null) {
+            player.setCustomName(Component.literal(nick));
+            player.setCustomNameVisible(false);
+            broadcastTabListUpdate(player);
+        }
+    }
+
+    /** Legacy overload kept for source compat with old EventHandler calls. */
     public static void onPlayerJoin(UUID uuid) {
-        // Reserved for future tracking
+        // Reserved — see overload above.
     }
 
     public static void onPlayerLeave(UUID uuid) {
         lastSeen.put(uuid, System.currentTimeMillis());
-        // Clean up messaging state
+        // Drop only transient session state; nicknames + ignoreList are persisted
+        // and stay in cache so messaging checks still work for offline targets.
         lastMessaged.remove(uuid);
-        ignoreList.remove(uuid);
     }
 }

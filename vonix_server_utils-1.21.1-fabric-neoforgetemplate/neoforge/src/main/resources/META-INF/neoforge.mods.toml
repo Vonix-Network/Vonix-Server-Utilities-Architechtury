@@ -34,5 +34,15 @@ versionRange = "[13.0.8,)"
 ordering = "AFTER"
 side = "BOTH"
 
+# LuckPerms — optional. If installed, VonixServerUtilities will auto-create
+# donation rank groups + sync players on join. Not installed = donation_ranks
+# feature self-disables with a clear log warning.
+[[dependencies.vonix_server_utilities]]
+modId = "luckperms"
+type = "optional"
+versionRange = "[5.4,)"
+ordering = "AFTER"
+side = "BOTH"
+
 [[mixins]]
 config = "vonix_server_utilities.mixins.json"

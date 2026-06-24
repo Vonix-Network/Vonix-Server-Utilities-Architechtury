@@ -1,5 +1,7 @@
 # Vonix Server Utilities — Monorepo
 
+**Current version: 1.2.0**
+
 Multi-version Architectury-based server utility mod for Minecraft.
 
 ## Supported Versions
@@ -25,7 +27,20 @@ Multi-version Architectury-based server utility mod for Minecraft.
 - `/nick`, `/msg`, `/r`, `/ignore`, `/ping`, `/near`, `/whois` — Player utilities
 - `/afk`, `/broadcast`, `/list`, `/playtime`, `/suicide` — Misc
 - `/hat`, `/more`, `/repair`, `/clear`, `/invsee`, `/enderchest`, `/workbench`, `/anvil`
+- `/invsee <player>` — Live view/edit of a player's inventory (Main/Hotbar/Armor/Offhand)
+- `/backsee <player>` — View the contents of backpacks in a player's inventory, ender chest, curio/trinket slots, and armor
+- `/accsee <player>` — View a player's accessories (Curios on Forge/NeoForge, Trinkets on Fabric)
 - `/vonixsu version|status|reload` — Mod info
+
+### Donation ranks & site integration (1.2.0+)
+
+- `/link`, `/unlink` — Bind a Minecraft identity to a Venary site account
+- `/feature enable|disable|list|reload|status` — Toggle subsystems against server-side config at runtime
+- **Donation rank sync** — Auto-applies/removes LuckPerms groups on join, live, and on expiry.
+  Requires [LuckPerms](https://luckperms.net) (optional dependency, `[5.0,)`); rank sync is
+  skipped entirely if LuckPerms is not installed.
+- **Venary integration** — Periodic player sync over an HTTP layer brought up from config
+  on server start and shut down cleanly on stop.
 
 ## Building
 

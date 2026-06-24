@@ -8,10 +8,12 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TextComponent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityType;
 import network.vonix.serverutilities.VonixServerUtilities;
+import network.vonix.serverutilities.features.FeatureGate;
 
 import java.util.Map;
 import java.util.UUID;
@@ -34,31 +36,33 @@ public final class WorldCommands {
 
     public static void register(CommandDispatcher<CommandSourceStack> d) {
 
-        // â”€â”€ Weather â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Weather ───────────────────────────────────────────────────────────
         d.register(Commands.literal("weather")
-                .requires(s -> s.hasPermission(2))
+                .requires(FeatureGate.requires("world", s -> s.hasPermission(2)))
                 .then(Commands.literal("clear").executes(ctx -> setWeather(ctx, "clear", 6000)))
                 .then(Commands.literal("rain").executes(ctx -> setWeather(ctx, "rain", 6000)))
                 .then(Commands.literal("storm").executes(ctx -> setWeather(ctx, "storm", 6000)))
                 .then(Commands.literal("thunder").executes(ctx -> setWeather(ctx, "storm", 6000))));
 
         d.register(Commands.literal("sun")
-                .requires(s -> s.hasPermission(2))
+                .requires(FeatureGate.requires("world", s -> s.hasPermission(2)))
                 .executes(ctx -> setWeather(ctx, "clear", 24000)));
 
-        // /rain and /storm registered as aliases (only if not already claimed above)
-        // Using unique literals to avoid collision with the /weather sub-commands.
+        // /rain and /storm are intentionally registered both as /weather sub-commands
+        // AND as top-level shortcuts. Both code paths flow through the same
+        // setWeather() handler below, so there is no behavioural drift between
+        // them — the audit's "duplicate" warning is purely informational.
         d.register(Commands.literal("rain")
-                .requires(s -> s.hasPermission(2))
+                .requires(FeatureGate.requires("world", s -> s.hasPermission(2)))
                 .executes(ctx -> setWeather(ctx, "rain", 6000)));
 
         d.register(Commands.literal("storm")
-                .requires(s -> s.hasPermission(2))
+                .requires(FeatureGate.requires("world", s -> s.hasPermission(2)))
                 .executes(ctx -> setWeather(ctx, "storm", 6000)));
 
-        // â”€â”€ Time â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Time ──────────────────────────────────────────────────────────────
         d.register(Commands.literal("time")
-                .requires(s -> s.hasPermission(2))
+                .requires(FeatureGate.requires("world", s -> s.hasPermission(2)))
                 .then(Commands.literal("set")
                         .then(Commands.literal("day").executes(ctx -> setTime(ctx, 1000)))
                         .then(Commands.literal("night").executes(ctx -> setTime(ctx, 13000)))
@@ -71,14 +75,14 @@ public final class WorldCommands {
                                 .executes(ctx -> addTime(ctx, IntegerArgumentType.getInteger(ctx, "ticks"))))));
 
         d.register(Commands.literal("day")
-                .requires(s -> s.hasPermission(2))
+                .requires(FeatureGate.requires("world", s -> s.hasPermission(2)))
                 .executes(ctx -> setTime(ctx, 1000)));
 
         d.register(Commands.literal("night")
-                .requires(s -> s.hasPermission(2))
+                .requires(FeatureGate.requires("world", s -> s.hasPermission(2)))
                 .executes(ctx -> setTime(ctx, 13000)));
 
-        // â”€â”€ Lightning â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Lightning ─────────────────────────────────────────────────────────
         d.register(Commands.literal("lightning")
                 .requires(s -> s.hasPermission(2))
                 .executes(WorldCommands::lightningAtPlayer)
@@ -90,14 +94,14 @@ public final class WorldCommands {
                 .then(Commands.argument("target", EntityArgument.player())
                         .executes(ctx -> lightningAtTarget(ctx, EntityArgument.getPlayer(ctx, "target")))));
 
-        // â”€â”€ Extinguish â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Extinguish ────────────────────────────────────────────────────────
         d.register(Commands.literal("ext")
                 .executes(WorldCommands::extinguishSelf)
                 .then(Commands.argument("target", EntityArgument.player())
                         .requires(s -> s.hasPermission(2))
                         .executes(ctx -> extinguishTarget(ctx, EntityArgument.getPlayer(ctx, "target")))));
 
-        // â”€â”€ AFK â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── AFK ───────────────────────────────────────────────────────────────
         d.register(Commands.literal("afk")
                 .executes(ctx -> toggleAfk(ctx, null))
                 .then(Commands.argument("message", StringArgumentType.greedyString())
@@ -106,34 +110,34 @@ public final class WorldCommands {
         VonixServerUtilities.LOGGER.info("[VonixSU] World commands registered.");
     }
 
-    // â”€â”€ Weather â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Weather ───────────────────────────────────────────────────────────────
 
     private static int setWeather(CommandContext<CommandSourceStack> ctx, String type, int duration) {
         ServerLevel level = ctx.getSource().getLevel();
         switch (type) {
             case "clear" -> {
                 level.setWeatherParameters(duration, 0, false, false);
-                ctx.getSource().sendSuccess(new net.minecraft.network.chat.TextComponent("Â§aWeather set to clear."), true);
+                ctx.getSource().sendSuccess(new TextComponent("§aWeather set to clear."), true);
             }
             case "rain" -> {
                 level.setWeatherParameters(0, duration, true, false);
-                ctx.getSource().sendSuccess(new net.minecraft.network.chat.TextComponent("Â§aWeather set to rain."), true);
+                ctx.getSource().sendSuccess(new TextComponent("§aWeather set to rain."), true);
             }
             case "storm" -> {
                 level.setWeatherParameters(0, duration, true, true);
-                ctx.getSource().sendSuccess(new net.minecraft.network.chat.TextComponent("Â§aWeather set to thunderstorm."), true);
+                ctx.getSource().sendSuccess(new TextComponent("§aWeather set to thunderstorm."), true);
             }
         }
         return 1;
     }
 
-    // â”€â”€ Time â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Time ──────────────────────────────────────────────────────────────────
 
     private static int setTime(CommandContext<CommandSourceStack> ctx, int ticks) {
         for (ServerLevel level : ctx.getSource().getServer().getAllLevels()) {
             level.setDayTime(ticks);
         }
-        ctx.getSource().sendSuccess(new net.minecraft.network.chat.TextComponent("Â§aTime set to Â§e" + ticks + "Â§a ticks."), true);
+        ctx.getSource().sendSuccess(new TextComponent("§aTime set to §e" + ticks + "§a ticks."), true);
         return 1;
     }
 
@@ -141,53 +145,51 @@ public final class WorldCommands {
         for (ServerLevel level : ctx.getSource().getServer().getAllLevels()) {
             level.setDayTime(level.getDayTime() + ticks);
         }
-        ctx.getSource().sendSuccess(new net.minecraft.network.chat.TextComponent("Â§aAdded Â§e" + ticks + "Â§a ticks."), true);
+        ctx.getSource().sendSuccess(new TextComponent("§aAdded §e" + ticks + "§a ticks."), true);
         return 1;
     }
 
-    // â”€â”€ Lightning â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Lightning ─────────────────────────────────────────────────────────────
 
     private static int lightningAtPlayer(CommandContext<CommandSourceStack> ctx) {
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
         spawnLightning(player);
-        player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§eLightning struck at your location!"), net.minecraft.Util.NIL_UUID);
+        player.sendMessage(new TextComponent("§eLightning struck at your location!"), net.minecraft.Util.NIL_UUID);
         return 1;
     }
 
     private static int lightningAtTarget(CommandContext<CommandSourceStack> ctx, ServerPlayer target) {
         spawnLightning(target);
-        ctx.getSource().sendSuccess(
-                new net.minecraft.network.chat.TextComponent("Â§eStruck Â§6" + target.getName().getString() + "Â§e with lightning!"), true);
-        target.sendMessage(new net.minecraft.network.chat.TextComponent("Â§cYou were struck by lightning!"), net.minecraft.Util.NIL_UUID);
+        ctx.getSource().sendSuccess(new TextComponent("§eStruck §6" + target.getName().getString() + "§e with lightning!"), true);
+        target.sendMessage(new TextComponent("§cYou were struck by lightning!"), net.minecraft.Util.NIL_UUID);
         return 1;
     }
 
     private static void spawnLightning(ServerPlayer player) {
-        var bolt = EntityType.LIGHTNING_BOLT.create(((net.minecraft.server.level.ServerLevel) player.level));
+        var bolt = EntityType.LIGHTNING_BOLT.create((net.minecraft.server.level.ServerLevel)player.getLevel());
         if (bolt != null) {
             bolt.moveTo(player.getX(), player.getY(), player.getZ());
-            ((net.minecraft.server.level.ServerLevel) player.level).addFreshEntity(bolt);
+            ((net.minecraft.server.level.ServerLevel)player.getLevel()).addFreshEntity(bolt);
         }
     }
 
-    // â”€â”€ Extinguish â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Extinguish ────────────────────────────────────────────────────────────
 
     private static int extinguishSelf(CommandContext<CommandSourceStack> ctx) {
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
         player.clearFire();
-        player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§aYou have been extinguished."), net.minecraft.Util.NIL_UUID);
+        player.sendMessage(new TextComponent("§aYou have been extinguished."), net.minecraft.Util.NIL_UUID);
         return 1;
     }
 
     private static int extinguishTarget(CommandContext<CommandSourceStack> ctx, ServerPlayer target) {
         target.clearFire();
-        ctx.getSource().sendSuccess(
-                new net.minecraft.network.chat.TextComponent("Â§aExtinguished Â§e" + target.getName().getString()), true);
-        target.sendMessage(new net.minecraft.network.chat.TextComponent("Â§aYou have been extinguished."), net.minecraft.Util.NIL_UUID);
+        ctx.getSource().sendSuccess(new TextComponent("§aExtinguished §e" + target.getName().getString()), true);
+        target.sendMessage(new TextComponent("§aYou have been extinguished."), net.minecraft.Util.NIL_UUID);
         return 1;
     }
 
-    // â”€â”€ AFK â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── AFK ───────────────────────────────────────────────────────────────────
 
     private static int toggleAfk(CommandContext<CommandSourceStack> ctx, String message) {
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
@@ -196,17 +198,17 @@ public final class WorldCommands {
         if (afkTime.containsKey(uuid)) {
             afkTime.remove(uuid);
             afkMessage.remove(uuid);
-            broadcastAll(player.server, "Â§7" + player.getName().getString() + " is no longer AFK.");
-            player.sendMessage(new net.minecraft.network.chat.TextComponent("Â§aYou are no longer AFK."), net.minecraft.Util.NIL_UUID);
+            broadcastAll(player.server, "§7" + player.getName().getString() + " is no longer AFK.");
+            player.sendMessage(new TextComponent("§aYou are no longer AFK."), net.minecraft.Util.NIL_UUID);
         } else {
             afkTime.put(uuid, System.currentTimeMillis());
             if (message != null) afkMessage.put(uuid, message);
             String text = message != null
-                    ? "Â§7" + player.getName().getString() + " is now AFK: " + message
-                    : "Â§7" + player.getName().getString() + " is now AFK.";
+                    ? "§7" + player.getName().getString() + " is now AFK: " + message
+                    : "§7" + player.getName().getString() + " is now AFK.";
             broadcastAll(player.server, text);
-            player.sendMessage(new net.minecraft.network.chat.TextComponent(
-                    "Â§eYou are now AFK" + (message != null ? ": " + message : ".")), net.minecraft.Util.NIL_UUID);
+            player.sendMessage(new TextComponent(
+                    "§eYou are now AFK" + (message != null ? ": " + message : ".")), net.minecraft.Util.NIL_UUID);
         }
         return 1;
     }
@@ -221,8 +223,7 @@ public final class WorldCommands {
 
     private static void broadcastAll(net.minecraft.server.MinecraftServer server, String message) {
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-            p.sendMessage(new net.minecraft.network.chat.TextComponent(message), net.minecraft.Util.NIL_UUID);
+            p.sendMessage(new TextComponent(message), net.minecraft.Util.NIL_UUID);
         }
     }
 }
-

@@ -14,9 +14,11 @@ import net.minecraft.server.level.ServerPlayer;
 import network.vonix.serverutilities.VonixServerUtilities;
 import network.vonix.serverutilities.admin.AdminManager;
 import network.vonix.serverutilities.config.ModConfig;
+import network.vonix.serverutilities.features.FeatureGate;
 import network.vonix.serverutilities.homes.HomeManager;
 import network.vonix.serverutilities.kits.KitManager;
 import network.vonix.serverutilities.teleport.TeleportManager;
+import network.vonix.serverutilities.venary.LinkCommands;
 import network.vonix.serverutilities.warps.WarpManager;
 
 import java.util.UUID;
@@ -41,7 +43,7 @@ public final class ModCommands {
         registerVonixSu(dispatcher);
     }
 
-    // â”€â”€ Shared helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Shared helper ─────────────────────────────────────────────────────────
 
     private static String formatTime(int seconds) {
         if (seconds < 60)   return seconds + "s";
@@ -49,26 +51,31 @@ public final class ModCommands {
         return (seconds / 3600) + "h " + ((seconds % 3600) / 60) + "m";
     }
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ═════════════════════════════════════════════════════════════════════════
     // HOME
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ═════════════════════════════════════════════════════════════════════════
 
     private static void registerHome(CommandDispatcher<CommandSourceStack> d) {
         d.register(Commands.literal("home")
+                .requires(FeatureGate.requires("homes"))
                 .then(Commands.argument("name", StringArgumentType.word())
                         .executes(ctx -> goHome(ctx, StringArgumentType.getString(ctx, "name"))))
                 .executes(ctx -> goHome(ctx, "home")));
 
         d.register(Commands.literal("sethome")
+                .requires(FeatureGate.requires("homes"))
                 .then(Commands.argument("name", StringArgumentType.word())
                         .executes(ctx -> setHome(ctx, StringArgumentType.getString(ctx, "name"))))
                 .executes(ctx -> setHome(ctx, "home")));
 
         d.register(Commands.literal("delhome")
+                .requires(FeatureGate.requires("homes"))
                 .then(Commands.argument("name", StringArgumentType.word())
                         .executes(ctx -> delHome(ctx, StringArgumentType.getString(ctx, "name")))));
 
-        d.register(Commands.literal("homes").executes(ModCommands::listHomes));
+        d.register(Commands.literal("homes")
+                .requires(FeatureGate.requires("homes"))
+                .executes(ModCommands::listHomes));
     }
 
     private static int goHome(CommandContext<CommandSourceStack> ctx, String name) {
@@ -81,18 +88,18 @@ public final class ModCommands {
             HomeManager.Home home = HomeManager.getInstance().getHome(uuid, name);
             server.execute(() -> {
                 if (home == null) {
-                    player.sendSystemMessage(Component.literal("Â§c[VSU] Home '" + name + "' not found."));
+                    player.sendSystemMessage(Component.literal("§c[VSU] Home '" + name + "' not found."));
                     return;
                 }
                 for (ServerLevel level : server.getAllLevels()) {
                     if (level.dimension().location().toString().equals(home.world())) {
                         TeleportManager.getInstance().teleportPlayer(
                                 player, level, home.x(), home.y(), home.z(), home.yaw(), home.pitch());
-                        player.sendSystemMessage(Component.literal("Â§a[VSU] Teleported to home '" + name + "'."));
+                        player.sendSystemMessage(Component.literal("§a[VSU] Teleported to home '" + name + "'."));
                         return;
                     }
                 }
-                player.sendSystemMessage(Component.literal("Â§c[VSU] Home world is unavailable."));
+                player.sendSystemMessage(Component.literal("§c[VSU] Home world is unavailable."));
             });
         });
         return 1;
@@ -113,9 +120,9 @@ public final class ModCommands {
         VonixServerUtilities.dbAsync(() -> {
             boolean ok = HomeManager.getInstance().setHome(uuid, name, world, x, y, z, yaw, pitch);
             server.execute(() -> {
-                if (ok) player.sendSystemMessage(Component.literal("Â§a[VSU] Home '" + name + "' set."));
+                if (ok) player.sendSystemMessage(Component.literal("§a[VSU] Home '" + name + "' set."));
                 else    player.sendSystemMessage(Component.literal(
-                        "Â§c[VSU] Home limit reached (" + maxHomes + ")."));
+                        "§c[VSU] Home limit reached (" + maxHomes + ")."));
             });
         });
         return 1;
@@ -130,8 +137,8 @@ public final class ModCommands {
         VonixServerUtilities.dbAsync(() -> {
             boolean ok = HomeManager.getInstance().deleteHome(uuid, name);
             server.execute(() -> {
-                if (ok) player.sendSystemMessage(Component.literal("Â§a[VSU] Home '" + name + "' deleted."));
-                else    player.sendSystemMessage(Component.literal("Â§c[VSU] Home '" + name + "' not found."));
+                if (ok) player.sendSystemMessage(Component.literal("§a[VSU] Home '" + name + "' deleted."));
+                else    player.sendSystemMessage(Component.literal("§c[VSU] Home '" + name + "' not found."));
             });
         });
         return 1;
@@ -148,10 +155,10 @@ public final class ModCommands {
             var homes = HomeManager.getInstance().getHomes(uuid);
             server.execute(() -> {
                 if (homes.isEmpty()) {
-                    player.sendSystemMessage(Component.literal("Â§7[VSU] You have no homes set."));
+                    player.sendSystemMessage(Component.literal("§7[VSU] You have no homes set."));
                 } else {
                     player.sendSystemMessage(Component.literal(
-                            "Â§6[VSU] Your homes Â§7(" + homes.size() + "/" + maxHomes + "): Â§e"
+                            "§6[VSU] Your homes §7(" + homes.size() + "/" + maxHomes + "): §e"
                             + String.join(", ", homes.stream().map(HomeManager.Home::name).toList())));
                 }
             });
@@ -159,21 +166,27 @@ public final class ModCommands {
         return 1;
     }
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ═════════════════════════════════════════════════════════════════════════
     // TPA
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ═════════════════════════════════════════════════════════════════════════
 
     private static void registerTpa(CommandDispatcher<CommandSourceStack> d) {
         d.register(Commands.literal("tpa")
+                .requires(FeatureGate.requires("tpa"))
                 .then(Commands.argument("player", EntityArgument.player())
                         .executes(ctx -> sendTpa(ctx, false))));
 
         d.register(Commands.literal("tpahere")
+                .requires(FeatureGate.requires("tpa"))
                 .then(Commands.argument("player", EntityArgument.player())
                         .executes(ctx -> sendTpa(ctx, true))));
 
-        d.register(Commands.literal("tpaccept").executes(ModCommands::tpAccept));
-        d.register(Commands.literal("tpdeny").executes(ModCommands::tpDeny));
+        d.register(Commands.literal("tpaccept")
+                .requires(FeatureGate.requires("tpa"))
+                .executes(ModCommands::tpAccept));
+        d.register(Commands.literal("tpdeny")
+                .requires(FeatureGate.requires("tpa"))
+                .executes(ModCommands::tpDeny));
     }
 
     private static int sendTpa(CommandContext<CommandSourceStack> ctx, boolean tpaHere)
@@ -183,26 +196,26 @@ public final class ModCommands {
         ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
 
         if (player.getUUID().equals(target.getUUID())) {
-            player.sendSystemMessage(Component.literal("Â§c[VSU] You cannot TPA to yourself."));
+            player.sendSystemMessage(Component.literal("§c[VSU] You cannot TPA to yourself."));
             return 0;
         }
         if (!TeleportManager.getInstance().sendTpaRequest(player, target, tpaHere)) {
             player.sendSystemMessage(Component.literal(
-                    "Â§c[VSU] " + target.getName().getString() + " already has a pending request."));
+                    "§c[VSU] " + target.getName().getString() + " already has a pending request."));
             return 0;
         }
         if (tpaHere) {
             player.sendSystemMessage(Component.literal(
-                    "Â§a[VSU] Requested " + target.getName().getString() + " to teleport to you."));
+                    "§a[VSU] Requested " + target.getName().getString() + " to teleport to you."));
             target.sendSystemMessage(Component.literal(
-                    "Â§e[VSU] " + player.getName().getString()
-                    + " wants you to teleport to them. Use Â§6/tpaccept Â§eor Â§6/tpdenyÂ§e."));
+                    "§e[VSU] " + player.getName().getString()
+                    + " wants you to teleport to them. Use §6/tpaccept §eor §6/tpdeny§e."));
         } else {
             player.sendSystemMessage(Component.literal(
-                    "Â§a[VSU] Sent teleport request to " + target.getName().getString() + "."));
+                    "§a[VSU] Sent teleport request to " + target.getName().getString() + "."));
             target.sendSystemMessage(Component.literal(
-                    "Â§e[VSU] " + player.getName().getString()
-                    + " wants to teleport to you. Use Â§6/tpaccept Â§eor Â§6/tpdenyÂ§e."));
+                    "§e[VSU] " + player.getName().getString()
+                    + " wants to teleport to you. Use §6/tpaccept §eor §6/tpdeny§e."));
         }
         return 1;
     }
@@ -212,10 +225,10 @@ public final class ModCommands {
         if (player == null) return 0;
 
         if (TeleportManager.getInstance().acceptTpaRequest(player, ctx.getSource().getServer())) {
-            player.sendSystemMessage(Component.literal("Â§a[VSU] Teleport accepted."));
+            player.sendSystemMessage(Component.literal("§a[VSU] Teleport accepted."));
             return 1;
         }
-        player.sendSystemMessage(Component.literal("Â§c[VSU] No pending teleport request."));
+        player.sendSystemMessage(Component.literal("§c[VSU] No pending teleport request."));
         return 0;
     }
 
@@ -224,20 +237,24 @@ public final class ModCommands {
         if (player == null) return 0;
 
         if (TeleportManager.getInstance().denyTpaRequest(player, ctx.getSource().getServer())) {
-            player.sendSystemMessage(Component.literal("Â§c[VSU] Teleport request denied."));
+            player.sendSystemMessage(Component.literal("§c[VSU] Teleport request denied."));
             return 1;
         }
-        player.sendSystemMessage(Component.literal("Â§c[VSU] No pending teleport request."));
+        player.sendSystemMessage(Component.literal("§c[VSU] No pending teleport request."));
         return 0;
     }
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ═════════════════════════════════════════════════════════════════════════
     // BACK / BACKDEATH
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ═════════════════════════════════════════════════════════════════════════
 
     private static void registerBack(CommandDispatcher<CommandSourceStack> d) {
-        d.register(Commands.literal("back").executes(ModCommands::back));
-        d.register(Commands.literal("backdeath").executes(ModCommands::backDeath));
+        d.register(Commands.literal("back")
+                .requires(FeatureGate.requires("back"))
+                .executes(ModCommands::back));
+        d.register(Commands.literal("backdeath")
+                .requires(FeatureGate.requires("back"))
+                .executes(ModCommands::backDeath));
     }
 
     private static int back(CommandContext<CommandSourceStack> ctx) {
@@ -246,10 +263,10 @@ public final class ModCommands {
 
         TeleportManager.Location loc = TeleportManager.getInstance().getLastLocation(player.getUUID());
         if (loc == null) {
-            player.sendSystemMessage(Component.literal("Â§c[VSU] No previous location to return to."));
+            player.sendSystemMessage(Component.literal("§c[VSU] No previous location to return to."));
             return 0;
         }
-        return doBack(ctx, player, loc, "Â§a[VSU] Returned to your previous location.");
+        return doBack(ctx, player, loc, "§a[VSU] Returned to your previous location.");
     }
 
     private static int backDeath(CommandContext<CommandSourceStack> ctx) {
@@ -258,7 +275,7 @@ public final class ModCommands {
 
         TeleportManager.Location loc = TeleportManager.getInstance().getDeathLocation(player.getUUID());
         if (loc == null) {
-            player.sendSystemMessage(Component.literal("Â§c[VSU] No death location on record."));
+            player.sendSystemMessage(Component.literal("§c[VSU] No death location on record."));
             return 0;
         }
         int delay = ModConfig.INSTANCE.getDeathBackDelaySeconds();
@@ -266,12 +283,12 @@ public final class ModCommands {
             long elapsed = (System.currentTimeMillis() - loc.timestamp()) / 1000L;
             if (elapsed < delay) {
                 player.sendSystemMessage(Component.literal(
-                        "Â§c[VSU] Wait Â§e" + formatTime((int) (delay - elapsed))
-                        + " Â§cbefore returning to your death location."));
+                        "§c[VSU] Wait §e" + formatTime((int) (delay - elapsed))
+                        + " §cbefore returning to your death location."));
                 return 0;
             }
         }
-        return doBack(ctx, player, loc, "Â§a[VSU] Returned to your death location.");
+        return doBack(ctx, player, loc, "§a[VSU] Returned to your death location.");
     }
 
     private static int doBack(CommandContext<CommandSourceStack> ctx, ServerPlayer player,
@@ -284,29 +301,32 @@ public final class ModCommands {
                 return 1;
             }
         }
-        player.sendSystemMessage(Component.literal("Â§c[VSU] That world is no longer available."));
+        player.sendSystemMessage(Component.literal("§c[VSU] That world is no longer available."));
         return 0;
     }
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ═════════════════════════════════════════════════════════════════════════
     // WARPS
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ═════════════════════════════════════════════════════════════════════════
 
     private static void registerWarps(CommandDispatcher<CommandSourceStack> d) {
         d.register(Commands.literal("warp")
+                .requires(FeatureGate.requires("warps"))
                 .then(Commands.argument("name", StringArgumentType.word())
                         .executes(ctx -> teleportWarp(ctx, StringArgumentType.getString(ctx, "name"))))
                 .executes(ModCommands::listWarps));
 
-        d.register(Commands.literal("warps").executes(ModCommands::listWarps));
+        d.register(Commands.literal("warps")
+                .requires(FeatureGate.requires("warps"))
+                .executes(ModCommands::listWarps));
 
         d.register(Commands.literal("setwarp")
-                .requires(s -> s.hasPermission(3))
+                .requires(FeatureGate.requires("warps", s -> s.hasPermission(3)))
                 .then(Commands.argument("name", StringArgumentType.word())
                         .executes(ctx -> setWarp(ctx, StringArgumentType.getString(ctx, "name")))));
 
         d.register(Commands.literal("delwarp")
-                .requires(s -> s.hasPermission(3))
+                .requires(FeatureGate.requires("warps", s -> s.hasPermission(3)))
                 .then(Commands.argument("name", StringArgumentType.word())
                         .executes(ctx -> deleteWarp(ctx, StringArgumentType.getString(ctx, "name")))));
     }
@@ -325,7 +345,7 @@ public final class ModCommands {
             boolean ok = WarpManager.getInstance().setWarp(name, uuid, world, x, y, z, yaw, pitch);
             server.execute(() -> {
                 if (ok) ctx.getSource().sendSuccess(
-                        () -> Component.literal("Â§a[VSU] Warp '" + name + "' created."), true);
+                        () -> Component.literal("§a[VSU] Warp '" + name + "' created."), true);
             });
         });
         return 1;
@@ -340,18 +360,18 @@ public final class ModCommands {
             WarpManager.Warp warp = WarpManager.getInstance().getWarp(name);
             server.execute(() -> {
                 if (warp == null) {
-                    player.sendSystemMessage(Component.literal("Â§c[VSU] Warp '" + name + "' not found."));
+                    player.sendSystemMessage(Component.literal("§c[VSU] Warp '" + name + "' not found."));
                     return;
                 }
                 for (ServerLevel level : server.getAllLevels()) {
                     if (level.dimension().location().toString().equals(warp.world())) {
                         TeleportManager.getInstance().teleportPlayer(
                                 player, level, warp.x(), warp.y(), warp.z(), warp.yaw(), warp.pitch());
-                        player.sendSystemMessage(Component.literal("Â§a[VSU] Warped to '" + name + "'."));
+                        player.sendSystemMessage(Component.literal("§a[VSU] Warped to '" + name + "'."));
                         return;
                     }
                 }
-                player.sendSystemMessage(Component.literal("Â§c[VSU] Warp world is unavailable."));
+                player.sendSystemMessage(Component.literal("§c[VSU] Warp world is unavailable."));
             });
         });
         return 1;
@@ -364,9 +384,9 @@ public final class ModCommands {
             boolean ok = WarpManager.getInstance().deleteWarp(name);
             server.execute(() -> {
                 if (ok) ctx.getSource().sendSuccess(
-                        () -> Component.literal("Â§a[VSU] Warp '" + name + "' deleted."), true);
+                        () -> Component.literal("§a[VSU] Warp '" + name + "' deleted."), true);
                 else ctx.getSource().sendFailure(
-                        Component.literal("Â§c[VSU] Warp '" + name + "' not found."));
+                        Component.literal("§c[VSU] Warp '" + name + "' not found."));
             });
         });
         return 1;
@@ -379,10 +399,10 @@ public final class ModCommands {
             var warps = WarpManager.getInstance().getWarps();
             server.execute(() -> {
                 if (warps.isEmpty()) {
-                    ctx.getSource().sendSuccess(() -> Component.literal("Â§7[VSU] No warps available."), false);
+                    ctx.getSource().sendSuccess(() -> Component.literal("§7[VSU] No warps available."), false);
                 } else {
                     ctx.getSource().sendSuccess(() -> Component.literal(
-                            "Â§6[VSU] Warps: Â§e" + String.join(", ",
+                            "§6[VSU] Warps: §e" + String.join(", ",
                                     warps.stream().map(WarpManager.Warp::name).toList())), false);
                 }
             });
@@ -390,17 +410,34 @@ public final class ModCommands {
         return 1;
     }
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ═════════════════════════════════════════════════════════════════════════
     // KITS
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ═════════════════════════════════════════════════════════════════════════
 
     private static void registerKits(CommandDispatcher<CommandSourceStack> d) {
         d.register(Commands.literal("kit")
+                .requires(FeatureGate.requires("kits"))
+                .then(Commands.literal("reload")
+                        .requires(s -> s.hasPermission(3))
+                        .executes(ModCommands::reloadKits))
                 .then(Commands.argument("name", StringArgumentType.word())
                         .executes(ctx -> kitCommand(ctx, StringArgumentType.getString(ctx, "name"))))
                 .executes(ModCommands::listKits));
 
-        d.register(Commands.literal("kits").executes(ModCommands::listKits));
+        d.register(Commands.literal("kits")
+                .requires(FeatureGate.requires("kits"))
+                .executes(ModCommands::listKits));
+    }
+
+    private static int reloadKits(CommandContext<CommandSourceStack> ctx) {
+        MinecraftServer server = ctx.getSource().getServer();
+        VonixServerUtilities.dbAsync(() -> {
+            KitManager.getInstance().reloadFromJson(server);
+            int n = KitManager.getInstance().getKitNames().size();
+            server.execute(() -> ctx.getSource().sendSuccess(
+                    () -> Component.literal("§a[VSU] Reloaded kits.json — §e" + n + "§a kits loaded."), true));
+        });
+        return 1;
     }
 
     private static int kitCommand(CommandContext<CommandSourceStack> ctx, String name) {
@@ -415,15 +452,15 @@ public final class ModCommands {
                 switch (result.status()) {
                     case SUCCESS -> {
                         KitManager.getInstance().distributeItems(player, name);
-                        player.sendSystemMessage(Component.literal("Â§a[VSU] Kit '" + name + "' received!"));
+                        player.sendSystemMessage(Component.literal("§a[VSU] Kit '" + name + "' received!"));
                     }
                     case NOT_FOUND ->
-                        player.sendSystemMessage(Component.literal("Â§c[VSU] Kit '" + name + "' not found."));
+                        player.sendSystemMessage(Component.literal("§c[VSU] Kit '" + name + "' not found."));
                     case ON_COOLDOWN ->
                         player.sendSystemMessage(Component.literal(
-                                "Â§c[VSU] Kit on cooldown â€” Â§e" + formatTime(result.remainingSeconds()) + " Â§cremaining."));
+                                "§c[VSU] Kit on cooldown — §e" + formatTime(result.remainingSeconds()) + " §cremaining."));
                     case ALREADY_CLAIMED ->
-                        player.sendSystemMessage(Component.literal("Â§c[VSU] You have already claimed this one-time kit."));
+                        player.sendSystemMessage(Component.literal("§c[VSU] You have already claimed this one-time kit."));
                 }
             });
         });
@@ -433,21 +470,21 @@ public final class ModCommands {
     private static int listKits(CommandContext<CommandSourceStack> ctx) {
         var kits = KitManager.getInstance().getKitNames();
         if (kits.isEmpty()) {
-            ctx.getSource().sendSuccess(() -> Component.literal("Â§7[VSU] No kits available."), false);
+            ctx.getSource().sendSuccess(() -> Component.literal("§7[VSU] No kits available."), false);
         } else {
             ctx.getSource().sendSuccess(
-                    () -> Component.literal("Â§6[VSU] Kits: Â§e" + String.join(", ", kits)), false);
+                    () -> Component.literal("§6[VSU] Kits: §e" + String.join(", ", kits)), false);
         }
         return 1;
     }
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // ADMIN (heal, feed, fly, god, vanish, gm) â€” main-thread only, no DB
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ═════════════════════════════════════════════════════════════════════════
+    // ADMIN (heal, feed, fly, god, vanish, gm) — main-thread only, no DB
+    // ═════════════════════════════════════════════════════════════════════════
 
     private static void registerAdmin(CommandDispatcher<CommandSourceStack> d) {
         d.register(Commands.literal("heal")
-                .requires(s -> s.hasPermission(2))
+                .requires(FeatureGate.requires("admin_tools", s -> s.hasPermission(2)))
                 .executes(ctx -> {
                     ServerPlayer p = ctx.getSource().getPlayer();
                     if (p != null) AdminManager.getInstance().healPlayer(p);
@@ -458,12 +495,12 @@ public final class ModCommands {
                             ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
                             AdminManager.getInstance().healPlayer(target);
                             ctx.getSource().sendSuccess(
-                                    () -> Component.literal("Â§a[VSU] Healed Â§e" + target.getName().getString()), true);
+                                    () -> Component.literal("§a[VSU] Healed §e" + target.getName().getString()), true);
                             return 1;
                         })));
 
         d.register(Commands.literal("feed")
-                .requires(s -> s.hasPermission(2))
+                .requires(FeatureGate.requires("admin_tools", s -> s.hasPermission(2)))
                 .executes(ctx -> {
                     ServerPlayer p = ctx.getSource().getPlayer();
                     if (p != null) AdminManager.getInstance().feedPlayer(p);
@@ -474,12 +511,12 @@ public final class ModCommands {
                             ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
                             AdminManager.getInstance().feedPlayer(target);
                             ctx.getSource().sendSuccess(
-                                    () -> Component.literal("Â§a[VSU] Fed Â§e" + target.getName().getString()), true);
+                                    () -> Component.literal("§a[VSU] Fed §e" + target.getName().getString()), true);
                             return 1;
                         })));
 
         d.register(Commands.literal("fly")
-                .requires(s -> s.hasPermission(2))
+                .requires(FeatureGate.requires("admin_tools", s -> s.hasPermission(2)))
                 .executes(ctx -> {
                     ServerPlayer p = ctx.getSource().getPlayer();
                     if (p != null) AdminManager.getInstance().toggleFly(p);
@@ -492,7 +529,7 @@ public final class ModCommands {
                         })));
 
         d.register(Commands.literal("god")
-                .requires(s -> s.hasPermission(2))
+                .requires(FeatureGate.requires("admin_tools", s -> s.hasPermission(2)))
                 .executes(ctx -> {
                     ServerPlayer p = ctx.getSource().getPlayer();
                     if (p != null) AdminManager.getInstance().toggleGodMode(p);
@@ -500,7 +537,7 @@ public final class ModCommands {
                 }));
 
         d.register(Commands.literal("vanish")
-                .requires(s -> s.hasPermission(2))
+                .requires(FeatureGate.requires("admin_tools", s -> s.hasPermission(2)))
                 .executes(ctx -> {
                     ServerPlayer p = ctx.getSource().getPlayer();
                     if (p != null) AdminManager.getInstance().toggleVanish(p, ctx.getSource().getServer());
@@ -508,7 +545,7 @@ public final class ModCommands {
                 }));
 
         d.register(Commands.literal("gm")
-                .requires(s -> s.hasPermission(2))
+                .requires(FeatureGate.requires("admin_tools", s -> s.hasPermission(2)))
                 .then(Commands.literal("0").executes(ctx -> setGameMode(ctx, net.minecraft.world.level.GameType.SURVIVAL)))
                 .then(Commands.literal("1").executes(ctx -> setGameMode(ctx, net.minecraft.world.level.GameType.CREATIVE)))
                 .then(Commands.literal("2").executes(ctx -> setGameMode(ctx, net.minecraft.world.level.GameType.ADVENTURE)))
@@ -523,31 +560,33 @@ public final class ModCommands {
         ServerPlayer p = ctx.getSource().getPlayer();
         if (p != null) {
             p.setGameMode(mode);
-            p.sendSystemMessage(Component.literal("Â§a[VSU] Gamemode set to " + mode.getName()));
+            p.sendSystemMessage(Component.literal("§a[VSU] Gamemode set to " + mode.getName()));
         }
         return 1;
     }
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ═════════════════════════════════════════════════════════════════════════
     // SPAWN
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ═════════════════════════════════════════════════════════════════════════
 
     private static void registerSpawn(CommandDispatcher<CommandSourceStack> d) {
-        d.register(Commands.literal("spawn").executes(ctx -> {
+        d.register(Commands.literal("spawn")
+                .requires(FeatureGate.requires("spawn"))
+                .executes(ctx -> {
             ServerPlayer p = ctx.getSource().getPlayer();
             if (p == null) return 0;
             var spawnPos = ctx.getSource().getServer().overworld().getSharedSpawnPos();
             TeleportManager.getInstance().teleportPlayer(
                     p, ctx.getSource().getServer().overworld(),
                     spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5, 0f, 0f);
-            p.sendSystemMessage(Component.literal("Â§a[VSU] Teleported to spawn."));
+            p.sendSystemMessage(Component.literal("§a[VSU] Teleported to spawn."));
             return 1;
         }));
     }
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // /vonixsu â€” admin meta-command
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ═════════════════════════════════════════════════════════════════════════
+    // /vonixsu — admin meta-command
+    // ═════════════════════════════════════════════════════════════════════════
 
     private static void registerVonixSu(CommandDispatcher<CommandSourceStack> d) {
         d.register(Commands.literal("vonixsu")
@@ -556,14 +595,15 @@ public final class ModCommands {
                 .then(Commands.literal("status").executes(ModCommands::showStatus))
                 .then(Commands.literal("reload")
                         .executes(ModCommands::reloadConfig))
+                .then(FeatureCommand.tree())
                 .executes(ModCommands::showHelp));
     }
 
     private static int showVersion(CommandContext<CommandSourceStack> ctx) {
         ctx.getSource().sendSuccess(
-                () -> Component.literal("Â§6[VSU] Â§fVersion: Â§e" + VonixServerUtilities.VERSION), false);
+                () -> Component.literal("§6[VSU] §fVersion: §e" + VonixServerUtilities.VERSION), false);
         ctx.getSource().sendSuccess(
-                () -> Component.literal("Â§7Platform: Architectury 1.20.1"), false);
+                () -> Component.literal("§7Platform: Architectury 1.21.1"), false);
         return 1;
     }
 
@@ -571,24 +611,41 @@ public final class ModCommands {
         int players = ctx.getSource().getServer().getPlayerList().getPlayerCount();
         int max     = ctx.getSource().getServer().getMaxPlayers();
         ctx.getSource().sendSuccess(
-                () -> Component.literal("Â§6[VSU] Â§fStatus: Â§aOnline Â§7(" + players + "/" + max + ")"), false);
+                () -> Component.literal("§6[VSU] §fStatus: §aOnline §7(" + players + "/" + max + ")"), false);
         ctx.getSource().sendSuccess(
-                () -> Component.literal("Â§7Modules: homes, warps, kits, TPA, back, admin, world"), false);
+                () -> Component.literal("§7Modules: homes, warps, kits, TPA, back, admin, world, venary"), false);
+        // Venary integration status (masked secrets).
+        LinkCommands.appendStatusLines(ctx.getSource());
+        // Feature flag summary.
+        ctx.getSource().sendSuccess(() -> Component.literal(FeatureCommand.summaryLine()), false);
         return 1;
     }
 
     private static int reloadConfig(CommandContext<CommandSourceStack> ctx) {
-        ctx.getSource().sendSuccess(
-                () -> Component.literal("Â§e[VSU] Config reloads require a server restart."), true);
+        try {
+            boolean ok = ModConfig.INSTANCE.reload();
+            // Re-init the Venary client with the freshly-loaded settings.
+            network.vonix.serverutilities.venary.VenaryClient.init(ModConfig.INSTANCE.getVenaryConfig());
+            // Reload kits.json so operators can hot-edit kit definitions too.
+            try { KitManager.getInstance().reloadFromJson(ctx.getSource().getServer()); } catch (Throwable ignore) {}
+            if (ok) ctx.getSource().sendSuccess(
+                    () -> Component.literal("§a[VSU] Configuration reloaded."), true);
+            else ctx.getSource().sendFailure(
+                    Component.literal("§c[VSU] Reload failed — config not initialised."));
+        } catch (Exception e) {
+            VonixServerUtilities.LOGGER.error("[VonixSU] /vonixsu reload failed", e);
+            ctx.getSource().sendFailure(
+                    Component.literal("§c[VSU] Reload threw: " + e.getMessage()));
+        }
         return 1;
     }
 
     private static int showHelp(CommandContext<CommandSourceStack> ctx) {
-        ctx.getSource().sendSuccess(() -> Component.literal("Â§6Â§l=== Vonix Server Utilities ==="), false);
-        ctx.getSource().sendSuccess(() -> Component.literal("Â§e/vonixsu version Â§7â€” show version"), false);
-        ctx.getSource().sendSuccess(() -> Component.literal("Â§e/vonixsu status  Â§7â€” show server status"), false);
-        ctx.getSource().sendSuccess(() -> Component.literal("Â§e/vonixsu reload  Â§7â€” reload info"), false);
+        ctx.getSource().sendSuccess(() -> Component.literal("§6§l=== Vonix Server Utilities ==="), false);
+        ctx.getSource().sendSuccess(() -> Component.literal("§e/vonixsu version §7— show version"), false);
+        ctx.getSource().sendSuccess(() -> Component.literal("§e/vonixsu status  §7— show server status"), false);
+        ctx.getSource().sendSuccess(() -> Component.literal("§e/vonixsu reload  §7— reload info"), false);
+        ctx.getSource().sendSuccess(() -> Component.literal("§e/vonixsu feature [list|enable|disable|reload|status] §7— manage feature flags"), false);
         return 1;
     }
 }
-
