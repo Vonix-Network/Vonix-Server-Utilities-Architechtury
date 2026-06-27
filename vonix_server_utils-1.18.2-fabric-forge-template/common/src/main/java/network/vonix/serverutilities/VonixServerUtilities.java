@@ -2,6 +2,10 @@ package network.vonix.serverutilities;
 
 import network.vonix.serverutilities.database.Database;
 import network.vonix.serverutilities.listener.EventHandler;
+import network.vonix.serverutilities.api.InventoryProviderRegistry;
+import network.vonix.serverutilities.inventory.providers.CapabilityInventoryProvider;
+import network.vonix.serverutilities.inventory.providers.CuriosInventoryProvider;
+import network.vonix.serverutilities.inventory.providers.LegacyNbtInventoryProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,7 +41,16 @@ public final class VonixServerUtilities {
     public static void init() {
         instance = new VonixServerUtilities();
         EventHandler.init();
+        registerBuiltinInventoryProviders();
         LOGGER.info("[VonixSU] Initialized.");
+    }
+
+    /** Register built-in {@link network.vonix.serverutilities.api.InventoryProvider}s. */
+    private static void registerBuiltinInventoryProviders() {
+        InventoryProviderRegistry.register(new CuriosInventoryProvider());
+        InventoryProviderRegistry.register(new CapabilityInventoryProvider());
+        InventoryProviderRegistry.register(new LegacyNbtInventoryProvider());
+        LOGGER.info("[VonixSU/SPI] Built-in InventoryProviders registered: curios, capability, legacy_nbt");
     }
 
     public static VonixServerUtilities getInstance() { return instance; }

@@ -5,6 +5,65 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-06-27
+
+`InventoryProvider` SPI under `network.vonix.serverutilities.api` —
+the hardcoded `/backsee` passes (Curios → DataComponents → capability
+walk → legacy NBT) are now pluggable. 3rd-party mods register custom
+resolvers via explicit `InventoryProviderRegistry.register(...)` calls
+or `META-INF/services/network.vonix.serverutilities.api.InventoryProvider`,
+no VSU release required. Backwards-compatible: no behaviour change.
+
+### Added
+- **Public SPI** under `network.vonix.serverutilities.api` (marked
+  SemVer-stable in `package-info.java`; internal packages remain
+  unstable):
+  - `InventoryProvider` — stable `id()`, `priority()` (lower runs
+    first), `Optional<InventoryView> resolve(ServerPlayer, int slotHint)`.
+  - `InventoryView` — adapter the provider returns; `getSlots()`,
+    `getStackInSlot(int)`, `setStackInSlot(int, ItemStack)`,
+    `persist()`, `getTitle()`. Each provider owns its own write-back
+    semantics through `persist()` — `/backsee` doesn't need to know the
+    item's storage layout.
+  - `InventoryProviderRegistry` — explicit `register(...)` plus lazy
+    `ServiceLoader.load(InventoryProvider.class, ...)` scan on first
+    `providers()` access. Last-write-wins by id so external mods can
+    override built-ins.
+- **Built-in providers** (registered at VSU init, wrap existing 1.4.0
+  passes — no functional change):
+  - `vonix:curios`     — priority 100, wraps `CuriosInventoryBridge`.
+  - `vonix:data_components` — priority 150, **1.21.1 only**, wraps the
+    `DataComponents.CONTAINER` pass.
+  - `vonix:capability` — priority 200, wraps `CapabilityInventoryBridge`.
+  - `vonix:legacy_nbt` — priority 300, the legacy `Items` /
+    `inventory` / `BlockEntityTag.Items` walk on
+    1.18.2 / 1.19.2 / 1.20.1. On 1.21.1 this provider is registered as a
+    no-op stub so a single 3rd-party `META-INF/services` registration
+    list works across every target.
+
+### Changed
+- `UtilityCommands.openBackpack` dispatches through the registry instead
+  of a hardcoded pass sequence. Providers are sorted by `priority()`,
+  iterated in order, first non-empty `resolve(...)` wins. The
+  `SimpleContainer` / `ChestMenu.sixRows` GUI boilerplate is built once
+  in the command and parameterised on `InventoryView` — net code
+  reduction.
+
+### Safety
+- ServiceLoader scan is wrapped in a catch-all; broken external provider
+  jars log a warning and do not break `/backsee`.
+- All built-in providers fail-closed on reflection (inherited from the
+  1.3.0 / 1.4.0 bridges they wrap).
+
+### Compile matrix (all clean)
+
+| Template | Task                    | JDK | Exit |
+|----------|-------------------------|-----|------|
+| 1.18.2   | `:forge:compileJava`    | 17  | 0    |
+| 1.19.2   | `:forge:compileJava`    | 17  | 0    |
+| 1.20.1   | `:forge:compileJava`    | 17  | 0    |
+| 1.21.1   | `:neoforge:compileJava` | 21  | 0    |
+
 ## [1.4.0] - 2026-06-27
 
 LuckPerms NCDFE crash fix + Curios soft-dep layer on `/backsee`. Ships

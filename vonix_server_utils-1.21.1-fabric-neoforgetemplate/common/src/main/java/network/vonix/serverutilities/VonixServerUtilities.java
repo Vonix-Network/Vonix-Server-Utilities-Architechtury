@@ -1,6 +1,11 @@
 package network.vonix.serverutilities;
 
+import network.vonix.serverutilities.api.InventoryProviderRegistry;
 import network.vonix.serverutilities.database.Database;
+import network.vonix.serverutilities.inventory.providers.CapabilityInventoryProvider;
+import network.vonix.serverutilities.inventory.providers.CuriosInventoryProvider;
+import network.vonix.serverutilities.inventory.providers.DataComponentsInventoryProvider;
+import network.vonix.serverutilities.inventory.providers.LegacyNbtInventoryProvider;
 import network.vonix.serverutilities.listener.EventHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,8 +41,22 @@ public final class VonixServerUtilities {
 
     public static void init() {
         instance = new VonixServerUtilities();
+        registerBuiltinInventoryProviders();
         EventHandler.init();
         LOGGER.info("[VonixSU] Initialized.");
+    }
+
+    /**
+     * Register built-in {@link network.vonix.serverutilities.api.InventoryProvider}s used by
+     * {@code /backsee}. 1.21+ also registers DataComponentsInventoryProvider for vanilla
+     * shulker/bundle DataComponents.CONTAINER support.
+     */
+    private static void registerBuiltinInventoryProviders() {
+        InventoryProviderRegistry.register(new CuriosInventoryProvider());
+        InventoryProviderRegistry.register(new DataComponentsInventoryProvider());
+        InventoryProviderRegistry.register(new CapabilityInventoryProvider());
+        InventoryProviderRegistry.register(new LegacyNbtInventoryProvider());
+        LOGGER.info("[VonixSU/SPI] Built-in InventoryProviders registered: curios, data_components, capability, legacy_nbt");
     }
 
     public static VonixServerUtilities getInstance() { return instance; }

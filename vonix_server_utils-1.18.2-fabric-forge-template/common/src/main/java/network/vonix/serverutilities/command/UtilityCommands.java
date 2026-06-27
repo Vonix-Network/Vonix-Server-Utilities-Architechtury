@@ -17,8 +17,10 @@ import net.minecraft.world.InteractionHand;
 import network.vonix.serverutilities.VonixServerUtilities;
 import network.vonix.serverutilities.features.FeatureGate;
 import network.vonix.serverutilities.inventory.InvseeContainer;
-import network.vonix.serverutilities.inventory.CapabilityInventoryBridge;
 import network.vonix.serverutilities.inventory.AccessoryHelper;
+import network.vonix.serverutilities.api.InventoryProvider;
+import network.vonix.serverutilities.api.InventoryProviderRegistry;
+import network.vonix.serverutilities.api.InventoryView;
 import network.vonix.serverutilities.teleport.TeleportManager;
 
 import java.util.*;
@@ -570,119 +572,29 @@ public final class UtilityCommands {
     }
 
     private static int openBackpack(CommandContext<CommandSourceStack> ctx, ServerPlayer target, int requestedSlot) {
-        // Layered detection:
-        //   1. Universal Forge/NeoForge IItemHandler capability walk (reflection bridge — covers Sophisticated
-        //      Backpacks/Storage, vanilla shulker via default cap provider, Iron Chests shulker, Traveler's
-        //      Backpack, Iron Backpacks, FunctionalStorage drawers-as-item, etc.).
-        //   2. Legacy NBT layout (raw `Items` / `inventory` / `BlockEntityTag.Items` lists) — fallback for
-        //      items that store inventory in NBT without exposing the capability.
-        //   3. None found → "No backpack found"
-        // PORT-NOTE: 1.21 uses DataComponents.CONTAINER + ItemContainerContents (added in 1.20.5). On 1.18.2
-        // we read/write the legacy NBT layout.
-        if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
+        // /backsee dispatches through the InventoryProvider SPI (network.vonix.serverutilities.api).
+        // Built-in providers (registered at mod init):
+        //   - vonix:curios          (priority 100) — Curios slot scan, soft-dep
+        //   - vonix:capability      (priority 200) — universal IItemHandler reflection bridge
+        //   - vonix:legacy_nbt      (priority 300) — Items / inventory / BlockEntityTag.Items NBT walk
+        // Third-party mods can register their own providers via InventoryProviderRegistry.register(...)
+        // or META-INF/services/network.vonix.serverutilities.api.InventoryProvider.
+        if (!(ctx.getSource().getEntity() instanceof ServerPlayer)) return 0;
+        ServerPlayer player = (ServerPlayer) ctx.getSource().getEntity();
 
-        int startSlot = requestedSlot >= 0 ? requestedSlot : 0;
-        int endSlotEx = requestedSlot >= 0
-                ? Math.min(requestedSlot + 1, target.getInventory().getContainerSize())
-                : target.getInventory().getContainerSize();
-
-        // -------- Pass 1: IItemHandler capability walk. --------
-        for (int i = startSlot; i < endSlotEx; i++) {
-            net.minecraft.world.item.ItemStack stack = target.getInventory().getItem(i);
-            if (stack.isEmpty()) continue;
-            java.util.Optional<CapabilityInventoryBridge.Handler> handlerOpt = CapabilityInventoryBridge.resolve(stack);
-            if (handlerOpt.isEmpty()) continue;
-            final CapabilityInventoryBridge.Handler handler = handlerOpt.get();
-            if (!handler.isModifiable()) continue; // read-only handler (rare) — fall through to legacy pass
-            final int slotIndex = i;
-            final net.minecraft.world.item.ItemStack finalStack = stack;
-            final int capSize = handler.getSlots();
-            final int guiSize = 54; // always six-row chest GUI; cap slots beyond capSize are ignored
-
-            net.minecraft.world.SimpleContainer container = new net.minecraft.world.SimpleContainer(guiSize) {
-                @Override
-                public void setChanged() {
-                    super.setChanged();
-                    int n = Math.min(capSize, this.getContainerSize());
-                    for (int j = 0; j < n; j++) {
-                        handler.setStackInSlot(j, this.getItem(j));
-                    }
-                    target.getInventory().setItem(slotIndex, finalStack);
-                    target.inventoryMenu.sendAllDataToRemote();
-                }
-            };
-
-            int n = Math.min(capSize, container.getContainerSize());
-            for (int j = 0; j < n; j++) {
-                container.setItem(j, handler.getStackInSlot(j));
+        for (InventoryProvider provider : InventoryProviderRegistry.providers()) {
+            java.util.Optional<InventoryView> viewOpt;
+            try {
+                viewOpt = provider.resolve(target, requestedSlot);
+            } catch (Throwable t) {
+                VonixServerUtilities.LOGGER.warn(
+                        "[VonixSU/SPI] InventoryProvider '{}' threw during resolve; skipping. {}",
+                        provider.id(), t.toString());
+                continue;
             }
-
-            player.openMenu(new net.minecraft.world.SimpleMenuProvider(
-                    (id, inv, p) -> net.minecraft.world.inventory.ChestMenu.sixRows(id, inv, container),
-                    new TextComponent("Backpack[" + slotIndex + "]: " + target.getName().getString())));
-            return 1;
-        }
-
-        // -------- Pass 2: legacy NBT-bearing containers (unchanged behaviour from prior /backsee). --------
-        for (int i = startSlot; i < endSlotEx; i++) {
-            net.minecraft.world.item.ItemStack stack = target.getInventory().getItem(i);
-            net.minecraft.nbt.CompoundTag tag = stack.getTag();
-            if (tag != null) {
-                net.minecraft.nbt.ListTag listTag = null;
-                if (tag.contains("Items", 9)) {
-                    listTag = tag.getList("Items", 10);
-                } else if (tag.contains("inventory", 9)) {
-                    listTag = tag.getList("inventory", 10);
-                } else if (tag.contains("BlockEntityTag", 10)) {
-                    net.minecraft.nbt.CompoundTag bet = tag.getCompound("BlockEntityTag");
-                    if (bet.contains("Items", 9)) {
-                        listTag = bet.getList("Items", 10);
-                    }
-                }
-
-                if (listTag != null) {
-                    final int slotIndex = i;
-                    final net.minecraft.world.item.ItemStack finalStack = stack;
-                    net.minecraft.world.SimpleContainer container = new net.minecraft.world.SimpleContainer(54) {
-                        @Override
-                        public void setChanged() {
-                            super.setChanged();
-                            net.minecraft.nbt.ListTag newListTag = new net.minecraft.nbt.ListTag();
-                            for (int j = 0; j < this.getContainerSize(); j++) {
-                                net.minecraft.world.item.ItemStack item = this.getItem(j);
-                                if (!item.isEmpty()) {
-                                    net.minecraft.nbt.CompoundTag itemTag = new net.minecraft.nbt.CompoundTag();
-                                    itemTag.putByte("Slot", (byte) j);
-                                    item.save(itemTag);
-                                    newListTag.add(itemTag);
-                                }
-                            }
-                            net.minecraft.nbt.CompoundTag t = finalStack.getOrCreateTag();
-                            if (t.contains("BlockEntityTag", 10)) {
-                                t.getCompound("BlockEntityTag").put("Items", newListTag);
-                            } else if (t.contains("inventory", 9)) {
-                                t.put("inventory", newListTag);
-                            } else {
-                                t.put("Items", newListTag);
-                            }
-                            target.getInventory().setItem(slotIndex, finalStack);
-                            target.inventoryMenu.sendAllDataToRemote();
-                        }
-                    };
-
-                    for (int j = 0; j < listTag.size(); j++) {
-                        net.minecraft.nbt.CompoundTag itemTag = listTag.getCompound(j);
-                        int slot = itemTag.getByte("Slot") & 255;
-                        if (slot >= 0 && slot < container.getContainerSize()) {
-                            container.setItem(slot, net.minecraft.world.item.ItemStack.of(itemTag));
-                        }
-                    }
-
-                    player.openMenu(new net.minecraft.world.SimpleMenuProvider(
-                            (id, inv, p) -> net.minecraft.world.inventory.ChestMenu.sixRows(id, inv, container),
-                            new TextComponent("Backpack[" + i + "]: " + target.getName().getString())));
-                    return 1;
-                }
+            if (viewOpt.isPresent()) {
+                openView(player, viewOpt.get());
+                return 1;
             }
         }
 
@@ -693,6 +605,36 @@ public final class UtilityCommands {
         }
         return 0;
     }
+
+    /**
+     * Open the resolved {@link InventoryView} as a six-row chest GUI on {@code viewer},
+     * mirroring writes back to the view via {@link InventoryView#persist()}.
+     */
+    private static void openView(ServerPlayer viewer, InventoryView view) {
+        final int viewSlots = view.getSlots();
+        final int guiSize = 54;
+
+        net.minecraft.world.SimpleContainer container = new net.minecraft.world.SimpleContainer(guiSize) {
+            @Override
+            public void setChanged() {
+                super.setChanged();
+                int n = Math.min(viewSlots, this.getContainerSize());
+                for (int j = 0; j < n; j++) {
+                    view.setStackInSlot(j, this.getItem(j));
+                }
+                view.persist();
+            }
+        };
+        int n = Math.min(viewSlots, container.getContainerSize());
+        for (int j = 0; j < n; j++) {
+            container.setItem(j, view.getStackInSlot(j));
+        }
+
+        viewer.openMenu(new net.minecraft.world.SimpleMenuProvider(
+                (id, inv, p) -> net.minecraft.world.inventory.ChestMenu.sixRows(id, inv, container),
+                new TextComponent(view.getTitle())));
+    }
+
 
     private static int openEnderChest(CommandContext<CommandSourceStack> ctx, ServerPlayer target) {
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
