@@ -1,21 +1,8 @@
 package network.vonix.serverutilities.donation_ranks;
 
-import net.luckperms.api.LuckPerms;
-import net.luckperms.api.LuckPermsProvider;
-import net.luckperms.api.model.data.DataMutateResult;
-import net.luckperms.api.model.data.NodeMap;
-import net.luckperms.api.model.group.Group;
-import net.luckperms.api.model.user.User;
-import net.luckperms.api.node.Node;
-import net.luckperms.api.node.NodeType;
-import net.luckperms.api.node.types.InheritanceNode;
-import net.luckperms.api.node.types.PrefixNode;
-import net.luckperms.api.node.types.WeightNode;
 import network.vonix.serverutilities.VonixServerUtilities;
 
 import java.util.Collections;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.List;
 import java.util.Map;
@@ -26,34 +13,41 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Optional bridge to the LuckPerms API (5.4+).
+ * Probe-only public surface for the LuckPerms integration.
  *
- * <p><b>LuckPerms is an OPTIONAL dependency.</b> If it isn't installed on the
- * server, {@link #get()} returns {@link Optional#empty()} and every public
- * helper short-circuits without throwing. This is what lets the mod ship a
- * single JAR that works with-or-without LP.
+ * <p><b>This class deliberately imports zero {@code net.luckperms.*} types.</b>
+ * Why: when the JVM links this class (first reference from {@code RankSyncTask}
+ * etc.), it must be able to resolve every type appearing in its constant pool.
+ * If a type from {@code net.luckperms.api.*} appears anywhere in the public
+ * shape of this class and LP isn't on the classpath, linking throws
+ * {@link NoClassDefFoundError} BEFORE any code in this class runs — meaning
+ * the try/catch we used to have around {@code LuckPermsProvider.get()} would
+ * never get a chance to fire. That's the v1.4.0 crash class: Sunlit Cobblemon
+ * (and any modpack without LuckPerms) crashed player join with NCDFE on
+ * {@code net/luckperms/api/node/Node}.
  *
- * <p>Detection is done with a try/catch on {@code LuckPermsProvider.get()};
- * we catch BOTH {@link NoClassDefFoundError} (LP not on classpath at all) and
- * {@link IllegalStateException} (LP class present but service not yet
- * registered, e.g. early server-starting).
- *
- * <h2>Security invariants enforced here</h2>
+ * <p>Fix — holder-class isolation (JDK canonical pattern, see
+ * {@code java.lang.invoke.MethodHandleStatics}):
  * <ul>
- *   <li><b>Reserved group names are refused.</b> {@code default}, {@code admin},
- *       {@code op}, {@code owner}, {@code vonix} (case-insensitive) cannot be
- *       managed by donation-rank sync — operators must never lose moderation
- *       authority because Venary thought a Patreon tier should be called
- *       "admin".</li>
- *   <li><b>Diff respects a managed-group whitelist.</b> {@link #setUserGroups}
- *       only ever adds/removes groups that appear in the passed
- *       {@code allManagedGroups} set. Any other group the player has — staff
- *       roles, region perks, anything an operator created by hand — is left
- *       untouched.</li>
+ *   <li>This class is pure Java types. The LP-presence probe runs in a
+ *       static initialiser via {@link Class#forName(String, boolean, ClassLoader)}
+ *       with {@code initialize=false} — that only LOADS the LP class, it
+ *       doesn't link any signature of ours against it.</li>
+ *   <li>Every public method first checks the cached {@link #LP_PRESENT} flag
+ *       and short-circuits to an empty/no-op result when LP is absent.</li>
+ *   <li>The real LP-typed code lives in package-private {@link LuckPermsBridgeImpl}.
+ *       Each call into {@code LuckPermsBridgeImpl} is INSIDE a method body
+ *       (not a static field), so the JVM defers linking the Impl class until
+ *       the first call site is reached — which only happens when
+ *       {@code LP_PRESENT == true}. When LP is missing, {@code LuckPermsBridgeImpl}
+ *       is never linked, the LP-typed signatures it carries never get
+ *       resolved, and NCDFE cannot fire.</li>
  * </ul>
  *
- * <p>All I/O off-thread: every public method returns a
- * {@link CompletableFuture}, none of them block.
+ * <p>All publicly exposed types are plain Java ({@code Optional<String>},
+ * {@code Set<String>}, etc.) or VSU-local types ({@link Diff},
+ * {@link GroupEnsureResult}, {@link UserPrefixInfo}). No LP type ever
+ * appears on the public surface.
  */
 public final class LuckPermsBridge {
 
@@ -62,35 +56,37 @@ public final class LuckPermsBridge {
             "default", "admin", "op", "owner", "vonix"
     );
 
-    private static volatile Boolean cachedPresent;
-    private static volatile LuckPerms cachedApi;
+    /**
+     * Resolved once, in this class's static initialiser, with
+     * {@code initialize=false} so loading LP's marker class does not
+     * trigger any LP-side static init. If false, every method on this
+     * class is a guaranteed no-op and {@link LuckPermsBridgeImpl} is
+     * never referenced.
+     */
+    private static final boolean LP_PRESENT;
     private static final AtomicBoolean warnedAbsent = new AtomicBoolean(false);
+
+    static {
+        boolean present = false;
+        try {
+            Class.forName("net.luckperms.api.LuckPermsProvider",
+                    false, LuckPermsBridge.class.getClassLoader());
+            present = true;
+        } catch (Throwable ignored) {
+            // ClassNotFoundException / LinkageError / SecurityException — all fail-closed.
+        }
+        LP_PRESENT = present;
+        if (!present) {
+            VonixServerUtilities.LOGGER.info(
+                    "[VonixSU] LuckPerms not detected on classpath — donation-rank sync disabled.");
+        }
+    }
 
     private LuckPermsBridge() {}
 
-    /**
-     * Returns the LuckPerms API if installed, else {@link Optional#empty()}.
-     * The first call to a server without LP logs a single visible warning;
-     * subsequent calls are silent.
-     */
-    public static Optional<LuckPerms> get() {
-        if (cachedPresent == Boolean.FALSE) return Optional.empty();
-        if (cachedApi != null) return Optional.of(cachedApi);
-        try {
-            LuckPerms api = LuckPermsProvider.get();
-            cachedApi = api;
-            cachedPresent = Boolean.TRUE;
-            return Optional.of(api);
-        } catch (NoClassDefFoundError | IllegalStateException notLoaded) {
-            if (warnedAbsent.compareAndSet(false, true)) {
-                VonixServerUtilities.LOGGER.warn(
-                        "[VonixSU] LuckPerms not detected — donation-rank sync is disabled. "
-                      + "Install LuckPerms to enable. (Cause: {})",
-                        notLoaded.getClass().getSimpleName());
-            }
-            cachedPresent = Boolean.FALSE;
-            return Optional.empty();
-        }
+    /** True iff LuckPerms is on the classpath. Cheap, side-effect-free. */
+    public static boolean isPresent() {
+        return LP_PRESENT;
     }
 
     /** True if the name is on the hard-coded refusal list. */
@@ -116,109 +112,15 @@ public final class LuckPermsBridge {
             throw new IllegalArgumentException(
                     "Refusing to manage reserved LuckPerms group: " + groupName);
         }
-        Optional<LuckPerms> lpOpt = get();
-        if (lpOpt.isEmpty()) {
+        if (!LP_PRESENT) {
             return CompletableFuture.completedFuture(GroupEnsureResult.SKIPPED);
         }
-        LuckPerms lp = lpOpt.get();
-
-        // PORT-NOTE: LuckPerms 5.4 GroupManager API is stable across all our
-        // target MC versions; the LP JAR is the same artifact for all loaders.
-        return lp.getGroupManager().loadGroup(groupName).thenCompose(opt -> {
-            CompletableFuture<Group> created;
-            boolean wasCreated;
-            if (opt.isPresent()) {
-                created = CompletableFuture.completedFuture(opt.get());
-                wasCreated = false;
-            } else {
-                created = lp.getGroupManager().createAndLoadGroup(groupName);
-                wasCreated = true;
-            }
-            final boolean createdFlag = wasCreated;
-            return created.thenCompose(group -> {
-                boolean changed = applyGroupAttributes(group, weight, prefix, meta, permissions);
-                if (!changed && !createdFlag) {
-                    return CompletableFuture.completedFuture(GroupEnsureResult.OK);
-                }
-                return lp.getGroupManager().saveGroup(group)
-                        .thenApply(v -> createdFlag ? GroupEnsureResult.CREATED : GroupEnsureResult.UPDATED);
-            });
-        }).exceptionally(t -> {
-            VonixServerUtilities.LOGGER.warn("[VonixSU] ensureGroupExists({}) failed: {}", groupName, t.getMessage());
-            return GroupEnsureResult.ERROR;
-        });
-    }
-
-    private static boolean applyGroupAttributes(Group group, int weight, String prefix, Map<String, String> meta, List<String> permissions) {
-        boolean changed = false;
-        NodeMap data = group.data();
-
-        // Weight
-        int currentWeight = group.getWeight().orElse(Integer.MIN_VALUE);
-        if (currentWeight != weight) {
-            for (Node n : new HashSet<>(data.toCollection())) {
-                if (n.getType() == NodeType.WEIGHT) data.remove(n);
-            }
-            data.add(WeightNode.builder(weight).build());
-            changed = true;
+        try {
+            return LuckPermsBridgeImpl.ensureGroupExists(groupName, weight, prefix, meta, permissions);
+        } catch (LinkageError | RuntimeException t) {
+            logBridgeFailureOnce("ensureGroupExists", t);
+            return CompletableFuture.completedFuture(GroupEnsureResult.ERROR);
         }
-        // Prefix
-        if (prefix != null && !prefix.isEmpty()) {
-            boolean hasPrefix = false;
-            for (Node n : data.toCollection()) {
-                if (n instanceof PrefixNode pn && weight == pn.getPriority() && prefix.equals(pn.getMetaValue())) {
-                    hasPrefix = true; break;
-                }
-            }
-            if (!hasPrefix) {
-                for (Node n : new HashSet<>(data.toCollection())) {
-                    if (n instanceof PrefixNode) data.remove(n);
-                }
-                data.add(PrefixNode.builder(prefix, weight).build());
-                changed = true;
-            }
-        }
-        // Free-form meta (color, etc.)
-        if (meta != null) {
-            for (Map.Entry<String, String> e : meta.entrySet()) {
-                if (e.getKey() == null || e.getValue() == null) continue;
-                Node n = net.luckperms.api.node.types.MetaNode.builder(e.getKey(), e.getValue()).build();
-                DataMutateResult r = data.add(n);
-                if (r == DataMutateResult.SUCCESS) changed = true;
-            }
-        }
-        // Permissions — reconcile within our managed prefix to avoid touching
-        // permissions LP operators added by hand. We mark our-managed perms
-        // via a normal PermissionNode and only remove ours that are no longer
-        // in the desired set.
-        if (permissions != null) {
-            java.util.Set<String> desired = new java.util.HashSet<>();
-            for (String pp : permissions) if (pp != null && !pp.isBlank()) desired.add(pp);
-            java.util.Set<String> current = new java.util.HashSet<>();
-            for (Node n : data.toCollection()) {
-                if (n.getType() == NodeType.PERMISSION) current.add(n.getKey());
-            }
-            // Add missing
-            for (String pp : desired) {
-                if (!current.contains(pp)) {
-                    data.add(net.luckperms.api.node.types.PermissionNode.builder(pp).build());
-                    changed = true;
-                }
-            }
-            // Remove our-managed perms that aren't desired anymore.
-            // Heuristic: only remove perms inside the "vonixsu." namespace —
-            // those are the ones the dashboard owns. Anything else (manual
-            // ops perms, other prefixes) we leave alone.
-            for (Node n : new java.util.HashSet<>(data.toCollection())) {
-                if (n.getType() == NodeType.PERMISSION
-                        && n.getKey().startsWith("vonixsu.")
-                        && !desired.contains(n.getKey())) {
-                    data.remove(n);
-                    changed = true;
-                }
-            }
-        }
-        return changed;
     }
 
     /**
@@ -226,83 +128,48 @@ public final class LuckPermsBridge {
      * SHOULD have.
      *
      * <p>The diff is computed strictly inside {@code allManagedGroups}: groups
-     * outside that set are never added and never removed. This is the
-     * whitelist that prevents donation sync from clobbering staff or
-     * per-region roles.
-     *
-     * @param player              UUID of the player.
-     * @param shouldHaveGroups    desired donation group names (any case).
-     * @param allManagedGroups    every group name we are allowed to touch.
+     * outside that set are never added and never removed.
      */
     public static CompletableFuture<Diff> setUserGroups(UUID player,
                                                        Set<String> shouldHaveGroups,
                                                        Set<String> allManagedGroups) {
-        Optional<LuckPerms> lpOpt = get();
-        if (lpOpt.isEmpty()) {
+        if (!LP_PRESENT) {
             return CompletableFuture.completedFuture(Diff.EMPTY);
         }
-        // Normalise + filter reserved (defence in depth).
-        Set<String> desired  = lower(shouldHaveGroups);
-        Set<String> managed  = lower(allManagedGroups);
-        desired.removeIf(LuckPermsBridge::isReservedGroupName);
-        managed.removeIf(LuckPermsBridge::isReservedGroupName);
-        // The effective desired set is the INTERSECTION of desired and managed.
-        Set<String> effectiveDesired = new LinkedHashSet<>(desired);
-        effectiveDesired.retainAll(managed);
-
-        LuckPerms lp = lpOpt.get();
-        return lp.getUserManager().loadUser(player).thenCompose(user -> {
-            if (user == null) return CompletableFuture.completedFuture(Diff.EMPTY);
-            Set<String> currentManaged = new LinkedHashSet<>();
-            for (Node n : user.data().toCollection()) {
-                if (n instanceof InheritanceNode in) {
-                    String g = in.getGroupName().toLowerCase(Locale.ROOT);
-                    if (managed.contains(g)) currentManaged.add(g);
-                }
-            }
-            Set<String> toAdd    = new LinkedHashSet<>(effectiveDesired);
-            toAdd.removeAll(currentManaged);
-            Set<String> toRemove = new LinkedHashSet<>(currentManaged);
-            toRemove.removeAll(effectiveDesired);
-
-            if (toAdd.isEmpty() && toRemove.isEmpty()) {
-                return CompletableFuture.completedFuture(Diff.EMPTY);
-            }
-            return applyDiff(lp, user, toAdd, toRemove);
-        }).exceptionally(t -> {
-            VonixServerUtilities.LOGGER.warn("[VonixSU] setUserGroups({}) failed: {}", player, t.getMessage());
-            return Diff.EMPTY;
-        });
+        try {
+            return LuckPermsBridgeImpl.setUserGroups(player, shouldHaveGroups, allManagedGroups);
+        } catch (LinkageError | RuntimeException t) {
+            logBridgeFailureOnce("setUserGroups", t);
+            return CompletableFuture.completedFuture(Diff.EMPTY);
+        }
     }
 
-    private static CompletableFuture<Diff> applyDiff(LuckPerms lp, User user,
-                                                    Set<String> toAdd, Set<String> toRemove) {
-        // Remove first, then add — order matters if the same node was being toggled.
-        for (String g : toRemove) {
-            for (Node n : new HashSet<>(user.data().toCollection())) {
-                if (n instanceof InheritanceNode in
-                        && in.getGroupName().equalsIgnoreCase(g)) {
-                    user.data().remove(n);
-                }
-            }
+    /**
+     * Resolve a user's cached metadata (prefix, suffix, {@code name-color}
+     * meta value) — used by the chat formatter. Returns {@link Optional#empty()}
+     * if LP is absent, the user is unknown, or any reflective probe fails.
+     * All returned strings are plain Java {@link String}; no LP type leaks
+     * across the surface.
+     */
+    public static Optional<UserPrefixInfo> getUserPrefixInfo(UUID player) {
+        if (!LP_PRESENT) return Optional.empty();
+        try {
+            return LuckPermsBridgeImpl.getUserPrefixInfo(player);
+        } catch (LinkageError | RuntimeException t) {
+            logBridgeFailureOnce("getUserPrefixInfo", t);
+            return Optional.empty();
         }
-        for (String g : toAdd) {
-            user.data().add(InheritanceNode.builder(g).build());
-        }
-        return lp.getUserManager().saveUser(user)
-                .thenApply(v -> new Diff(Set.copyOf(toAdd), Set.copyOf(toRemove)));
     }
 
-    private static Set<String> lower(Set<String> in) {
-        if (in == null) return new LinkedHashSet<>();
-        Set<String> out = new LinkedHashSet<>(in.size());
-        for (String s : in) {
-            if (s != null && !s.isBlank()) out.add(s.toLowerCase(Locale.ROOT));
+    private static void logBridgeFailureOnce(String where, Throwable t) {
+        if (warnedAbsent.compareAndSet(false, true)) {
+            VonixServerUtilities.LOGGER.warn(
+                    "[VonixSU] LuckPerms bridge call '{}' failed (will not warn again this run): {}: {}",
+                    where, t.getClass().getSimpleName(), t.getMessage());
         }
-        return out;
     }
 
-    // ── Result types ────────────────────────────────────────────────────────
+    // ── Result types (all VSU-local, no LP types) ───────────────────────────
 
     public enum GroupEnsureResult { CREATED, UPDATED, OK, SKIPPED, ERROR }
 
@@ -316,5 +183,20 @@ public final class LuckPermsBridge {
             this.removed = removed;
         }
         public boolean isEmpty() { return added.isEmpty() && removed.isEmpty(); }
+    }
+
+    /**
+     * Snapshot of a user's chat-render-relevant LP metadata. All fields are
+     * plain Java strings; nullable on absence.
+     */
+    public static final class UserPrefixInfo {
+        public final String prefix;
+        public final String suffix;
+        public final String nameColor;
+        public UserPrefixInfo(String prefix, String suffix, String nameColor) {
+            this.prefix = prefix;
+            this.suffix = suffix;
+            this.nameColor = nameColor;
+        }
     }
 }

@@ -5,6 +5,82 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-06-27
+
+LuckPerms NCDFE crash fix + Curios soft-dep layer on `/backsee`. Ships
+on all 4 templates. Backwards-compatible: no config changes, no public
+API removals. The crash class affects any modpack that ships VSU
+without LuckPerms (Sunlit Cobblemon was the canary).
+
+### Fixed
+- **Player-join crash (`NoClassDefFoundError: net/luckperms/api/node/Node`)**
+  on any modpack that does not bundle LuckPerms. Root cause: the prior
+  `LuckPermsBridge` had `net.luckperms.api.*` types on its public surface
+  (return types, field types). When `RankSyncTask.onJoin` first referenced
+  `LuckPermsBridge`, the JVM linked the class and resolved every type in
+  its constant pool — NCDFE fired during *linking*, OUTSIDE the runtime
+  try/catch inside `LuckPermsBridge.get()`. Fix: holder-class isolation
+  pattern (JDK canonical, see `java.lang.invoke.MethodHandleStatics`).
+  `LuckPermsBridge` is now a probe-only public class with **zero**
+  `net.luckperms.*` imports anywhere. Its static initialiser does a
+  `Class.forName("net.luckperms.api.LuckPermsProvider", initialize=false,
+  classloader)` probe and caches the result in a final boolean
+  `LP_PRESENT`. The LP-typed code moved to package-private
+  `LuckPermsBridgeImpl` — referenced only inside method bodies (never in
+  field types), so the JVM defers linking the Impl class until the first
+  call site is hit. When LP is absent, no call site is ever reached, the
+  Impl class is never linked, and NCDFE cannot fire. Defensive
+  `try { ... } catch (LinkageError | RuntimeException t)` belts wrap
+  `RankSyncTask.onJoin`, `RankGroupSyncer.syncAll`, and every public
+  `LuckPermsBridge` method as belt-and-braces.
+
+### Added
+- **Curios soft-dep layer for `/backsee`**
+  (`inventory/CuriosInventoryBridge.java` + new Pass 0 in
+  `UtilityCommands.openBackpack`). When Curios is present, `/backsee`
+  now scans every curio slot on the target player (cosmetic, charm,
+  ring, belt, etc.) before falling through to the existing
+  capability-walk / NBT-walk / DataComponents passes. If any curio stack
+  itself exposes `IItemHandler`, it is opened with the same
+  read-and-write-back GUI used for main-inventory backpacks. Reflection
+  only — Curios absent = silently skipped. Probe path:
+  `CuriosApi.getCuriosInventory(LivingEntity)` →
+  `ICuriosItemHandler.getCurios()` →
+  `ICurioStacksHandler.getStacks()` → `IItemHandler.getStackInSlot(i)`.
+  The Curios API FQN is the same on 1.18.2 / 1.19.2 / 1.20.1 Forge and
+  1.21.1 NeoForge.
+
+### Changed
+- `/backsee` pass order is now:
+  - 1.18.2 / 1.19.2 / 1.20.1: **(0)** Curios slot scan (new) →
+    **(1)** capability walk → **(2)** legacy NBT walk.
+  - 1.21.1: **(0)** Curios slot scan (new) →
+    **(1)** `DataComponents.CONTAINER` → **(2)** capability walk.
+  - Pass 0 is skipped when an explicit slot index is supplied
+    (`/backsee <target> <0..40>`); curio slots are not part of the
+    main-inventory index space.
+- `LuckPermsBridge` public surface refactored — internal-only breaking
+  change. `get()` returning `Optional<LuckPerms>` removed; replaced by
+  semantic methods (`isPresent()`, `ensureGroupExists(...)`,
+  `setUserGroups(...)`, `getUserPrefixInfo(uuid)`) that return only
+  plain Java types or VSU-local POJOs. No public consumer outside the
+  mod's own `common/` source touched LP-typed return values.
+
+### Safety
+- Reflection fail-closed across both new bridges: any `LinkageError` /
+  `ReflectiveOperationException` logs once and disables the affected
+  code path. NCDFE cannot escape `LuckPermsBridge`; ReflectiveOpEx
+  cannot escape `CuriosInventoryBridge`.
+
+### Compile matrix (all clean)
+
+| Template | Task                    | JDK | Exit |
+|----------|-------------------------|-----|------|
+| 1.18.2   | `:forge:compileJava`    | 17  | 0    |
+| 1.19.2   | `:forge:compileJava`    | 17  | 0    |
+| 1.20.1   | `:forge:compileJava`    | 17  | 0    |
+| 1.21.1   | `:neoforge:compileJava` | 21  | 0    |
+
 ## [1.3.0] - 2026-06-27
 
 Backpack-viewer rewrite. Backwards-compatible: `/backsee <player>` keeps

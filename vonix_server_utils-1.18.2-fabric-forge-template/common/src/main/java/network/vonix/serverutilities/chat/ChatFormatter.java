@@ -1,8 +1,5 @@
 package network.vonix.serverutilities.chat;
 
-import net.luckperms.api.LuckPerms;
-import net.luckperms.api.cacheddata.CachedMetaData;
-import net.luckperms.api.model.user.User;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -36,19 +33,14 @@ public final class ChatFormatter {
      * component untouched.
      */
     public static Optional<Component> format(ServerPlayer player, String rawMessage) {
-        Optional<LuckPerms> lpOpt = LuckPermsBridge.get();
-        if (lpOpt.isEmpty()) {
-            return Optional.empty();
-        }
         try {
-            User user = lpOpt.get().getUserManager().getUser(player.getUUID());
-            if (user == null) {
+            Optional<LuckPermsBridge.UserPrefixInfo> info = LuckPermsBridge.getUserPrefixInfo(player.getUUID());
+            if (!info.isPresent()) {
                 return Optional.empty();
             }
-            CachedMetaData meta = user.getCachedData().getMetaData();
-            String prefix = meta.getPrefix();
-            String suffix = meta.getSuffix();
-            String nameColor = meta.getMetaValue("name-color");
+            String prefix = info.get().prefix;
+            String suffix = info.get().suffix;
+            String nameColor = info.get().nameColor;
 
             MutableComponent out = new TextComponent("");
             if (prefix != null && !prefix.isEmpty()) {
@@ -68,7 +60,7 @@ public final class ChatFormatter {
             // perms to use color codes (LP perm check could be added here).
             out.append(parseLegacy(rawMessage == null ? "" : rawMessage));
             return Optional.of(out);
-        } catch (Throwable t) {
+        } catch (LinkageError | RuntimeException t) {
             VonixServerUtilities.LOGGER.warn("[VonixSU] ChatFormatter failed for {}", player.getName().getString(), t);
             return Optional.empty();
         }

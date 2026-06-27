@@ -28,7 +28,17 @@ public final class RankGroupSyncer {
     private RankGroupSyncer() {}
 
     public static void syncAll() {
-        if (LuckPermsBridge.get().isEmpty()) return; // bridge logged its own warning
+        try {
+            syncAllInternal();
+        } catch (LinkageError | RuntimeException t) {
+            VonixServerUtilities.LOGGER.warn(
+                    "[VonixSU] LP group syncer disabled this pass due to {}: {}",
+                    t.getClass().getSimpleName(), t.getMessage());
+        }
+    }
+
+    private static void syncAllInternal() {
+        if (!LuckPermsBridge.isPresent()) return; // probe logs once at static init
         List<FeatureRegistry.DonationRank> ranks = FeatureRegistry.getInstance().getDonationRanks();
         if (ranks.isEmpty()) {
             VonixServerUtilities.LOGGER.info("[VonixSU] No donation ranks configured — skipping LP group sync.");

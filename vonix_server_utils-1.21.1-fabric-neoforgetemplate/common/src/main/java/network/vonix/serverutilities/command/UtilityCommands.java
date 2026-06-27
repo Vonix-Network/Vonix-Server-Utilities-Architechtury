@@ -17,6 +17,7 @@ import network.vonix.serverutilities.VonixServerUtilities;
 import network.vonix.serverutilities.features.FeatureGate;
 import network.vonix.serverutilities.inventory.InvseeContainer;
 import network.vonix.serverutilities.inventory.CapabilityInventoryBridge;
+import network.vonix.serverutilities.inventory.CuriosInventoryBridge;
 import network.vonix.serverutilities.inventory.AccessoryHelper;
 import network.vonix.serverutilities.teleport.TeleportManager;
 
@@ -578,6 +579,50 @@ public final class UtilityCommands {
         int endSlotEx = requestedSlot >= 0
                 ? Math.min(requestedSlot + 1, target.getInventory().getContainerSize())
                 : target.getInventory().getContainerSize();
+
+        // -------- Pass 0: Curios slot scan (soft-dep). --------
+        // Only when no explicit slot was requested — Curios slots are not part of
+        // the player's main-inventory slot index space (0..40 = hotbar+main+armor+offhand).
+        if (requestedSlot < 0) {
+            java.util.Optional<java.util.List<net.minecraft.world.item.ItemStack>> curiosOpt =
+                    CuriosInventoryBridge.getCuriosStacks(target);
+            if (curiosOpt.isPresent()) {
+                int curioIdx = 0;
+                for (net.minecraft.world.item.ItemStack curioStack : curiosOpt.get()) {
+                    if (curioStack == null || curioStack.isEmpty()) { curioIdx++; continue; }
+                    java.util.Optional<CapabilityInventoryBridge.Handler> chOpt =
+                            CapabilityInventoryBridge.resolve(curioStack);
+                    if (chOpt.isEmpty()) { curioIdx++; continue; }
+                    final CapabilityInventoryBridge.Handler handler = chOpt.get();
+                    if (!handler.isModifiable()) { curioIdx++; continue; }
+                    final net.minecraft.world.item.ItemStack finalStack = curioStack;
+                    final int capSize = handler.getSlots();
+                    final int guiSize = 54;
+                    final int curioLabel = curioIdx;
+
+                    net.minecraft.world.SimpleContainer container = new net.minecraft.world.SimpleContainer(guiSize) {
+                        @Override
+                        public void setChanged() {
+                            super.setChanged();
+                            int n = Math.min(capSize, this.getContainerSize());
+                            for (int j = 0; j < n; j++) {
+                                handler.setStackInSlot(j, this.getItem(j));
+                            }
+                            // The Curios slot itself owns the stack — no main-inv writeback needed.
+                            target.inventoryMenu.sendAllDataToRemote();
+                        }
+                    };
+                    int n = Math.min(capSize, container.getContainerSize());
+                    for (int j = 0; j < n; j++) {
+                        container.setItem(j, handler.getStackInSlot(j));
+                    }
+                    player.openMenu(new net.minecraft.world.SimpleMenuProvider(
+                            (id, inv, p) -> net.minecraft.world.inventory.ChestMenu.sixRows(id, inv, container),
+                            Component.literal("Backpack[curio:" + curioLabel + "]: " + target.getName().getString())));
+                    return 1;
+                }
+            }
+        }
 
         // -------- Pass 1: vanilla DataComponents.CONTAINER (shulker boxes, bundles, etc.) --------
         for (int i = startSlot; i < endSlotEx; i++) {

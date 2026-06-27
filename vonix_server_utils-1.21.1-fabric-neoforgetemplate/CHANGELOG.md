@@ -5,6 +5,31 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ---
 
+## [1.4.0] — 2026-06-27
+
+### Fixed
+- **NCDFE crash on player join** when LuckPerms is absent (Sunlit
+  Cobblemon canary). `LuckPermsBridge` rewritten as a probe-only public
+  class with zero `net.luckperms.*` types on its surface; LP-typed code
+  moved to package-private `LuckPermsBridgeImpl`, deferred-linked only
+  when `Class.forName` probe confirms LP presence. Holder-class
+  isolation pattern.
+
+### Added
+- **Curios soft-dep on `/backsee`** (`CuriosInventoryBridge.java`).
+  Pass 0 in `openBackpack`: walk every Curios slot on the target
+  player, and if any curio stack exposes `IItemHandler` open it via
+  the existing capability bridge. Curios absent = silently skipped
+  (reflection-only). Pass order is now Curios → DataComponents.CONTAINER
+  → capability walk.
+
+### Changed
+- `LuckPermsBridge` public API: `get()` removed, replaced by
+  `isPresent()` / `getUserPrefixInfo(uuid)` / semantic group methods.
+  No LP types on the public surface anywhere.
+
+---
+
 ## [1.3.0] — 2026-06-27
 
 ### Added

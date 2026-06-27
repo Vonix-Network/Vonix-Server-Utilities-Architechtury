@@ -41,9 +41,23 @@ public final class RankSyncTask {
 
     /** Hook from EventHandler PLAYER_JOIN. */
     public static void onJoin(ServerPlayer player) {
+        // Defensive belt-and-braces: even with the holder-class probe inside
+        // LuckPermsBridge, wrap the whole entry point so any LinkageError /
+        // RuntimeException coming out of any LP-touching code cannot escape
+        // and crash player join.
+        try {
+            onJoinInternal(player);
+        } catch (LinkageError | RuntimeException t) {
+            VonixServerUtilities.LOGGER.warn(
+                    "[VonixSU/Ranks] onJoin disabled this tick due to {}: {}",
+                    t.getClass().getSimpleName(), t.getMessage());
+        }
+    }
+
+    private static void onJoinInternal(ServerPlayer player) {
         if (player == null) return;
         if (!FeatureRegistry.getInstance().isEnabled("donation_ranks")) return;
-        if (LuckPermsBridge.get().isEmpty()) return;
+        if (!LuckPermsBridge.isPresent()) return;
 
         VenaryClient client = VenaryClient.get();
         if (client == null) return;
