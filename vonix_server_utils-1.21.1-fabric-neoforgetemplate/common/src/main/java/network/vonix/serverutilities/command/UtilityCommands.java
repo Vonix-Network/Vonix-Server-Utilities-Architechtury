@@ -16,6 +16,7 @@ import net.minecraft.world.InteractionHand;
 import network.vonix.serverutilities.VonixServerUtilities;
 import network.vonix.serverutilities.features.FeatureGate;
 import network.vonix.serverutilities.inventory.InvseeContainer;
+import network.vonix.serverutilities.inventory.CapabilityInventoryBridge;
 import network.vonix.serverutilities.inventory.AccessoryHelper;
 import network.vonix.serverutilities.teleport.TeleportManager;
 
@@ -511,7 +512,11 @@ public final class UtilityCommands {
         d.register(Commands.literal("backsee")
                 .requires(FeatureGate.requires("utility", s -> s.hasPermission(2)))
                 .then(Commands.argument("target", EntityArgument.player())
-                        .executes(ctx -> openBackpack(ctx, EntityArgument.getPlayer(ctx, "target")))));
+                        .executes(ctx -> openBackpack(ctx, EntityArgument.getPlayer(ctx, "target"), -1))
+                        .then(Commands.argument("slot", com.mojang.brigadier.arguments.IntegerArgumentType.integer(0, 40))
+                                .executes(ctx -> openBackpack(ctx,
+                                        EntityArgument.getPlayer(ctx, "target"),
+                                        com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "slot"))))));
 
         d.register(Commands.literal("accsee")
                 .requires(FeatureGate.requires("utility", s -> s.hasPermission(2)))
@@ -566,54 +571,97 @@ public final class UtilityCommands {
         return 1;
     }
 
-    private static int openBackpack(CommandContext<CommandSourceStack> ctx, ServerPlayer target) {
+    private static int openBackpack(CommandContext<CommandSourceStack> ctx, ServerPlayer target, int requestedSlot) {
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
 
-        net.minecraft.world.item.ItemStack backpack = net.minecraft.world.item.ItemStack.EMPTY;
+        int startSlot = requestedSlot >= 0 ? requestedSlot : 0;
+        int endSlotEx = requestedSlot >= 0
+                ? Math.min(requestedSlot + 1, target.getInventory().getContainerSize())
+                : target.getInventory().getContainerSize();
 
-        for (int i = 0; i < target.getInventory().getContainerSize(); i++) {
+        // -------- Pass 1: vanilla DataComponents.CONTAINER (shulker boxes, bundles, etc.) --------
+        for (int i = startSlot; i < endSlotEx; i++) {
             net.minecraft.world.item.ItemStack stack = target.getInventory().getItem(i);
             if (stack.has(net.minecraft.core.component.DataComponents.CONTAINER)) {
-                backpack = stack;
-                break;
-            }
-        }
+                net.minecraft.world.item.component.ItemContainerContents contents =
+                        stack.get(net.minecraft.core.component.DataComponents.CONTAINER);
+                final net.minecraft.world.item.ItemStack finalBackpack = stack;
+                final int slotIndex = i;
 
-        if (backpack.isEmpty()) {
-            player.sendSystemMessage(Component.literal("No backpack found"));
-            return 0;
-        }
+                net.minecraft.world.SimpleContainer container = new net.minecraft.world.SimpleContainer(54) {
+                    @Override
+                    public void setChanged() {
+                        super.setChanged();
+                        java.util.List<net.minecraft.world.item.ItemStack> list = new java.util.ArrayList<>();
+                        for (int j = 0; j < this.getContainerSize(); j++) {
+                            list.add(this.getItem(j));
+                        }
+                        finalBackpack.set(net.minecraft.core.component.DataComponents.CONTAINER,
+                                net.minecraft.world.item.component.ItemContainerContents.fromItems(list));
+                        target.inventoryMenu.sendAllDataToRemote();
+                    }
+                };
 
-        net.minecraft.world.item.component.ItemContainerContents contents = backpack.get(net.minecraft.core.component.DataComponents.CONTAINER);
-        final net.minecraft.world.item.ItemStack finalBackpack = backpack;
-
-        net.minecraft.world.SimpleContainer container = new net.minecraft.world.SimpleContainer(54) {
-            @Override
-            public void setChanged() {
-                super.setChanged();
-                java.util.List<net.minecraft.world.item.ItemStack> list = new java.util.ArrayList<>();
-                for (int i = 0; i < this.getContainerSize(); i++) {
-                    list.add(this.getItem(i));
+                if (contents != null) {
+                    net.minecraft.core.NonNullList<net.minecraft.world.item.ItemStack> items =
+                            net.minecraft.core.NonNullList.withSize(54, net.minecraft.world.item.ItemStack.EMPTY);
+                    contents.copyInto(items);
+                    for (int j = 0; j < items.size(); j++) {
+                        container.setItem(j, items.get(j).copy());
+                    }
                 }
-                finalBackpack.set(net.minecraft.core.component.DataComponents.CONTAINER, net.minecraft.world.item.component.ItemContainerContents.fromItems(list));
-                target.inventoryMenu.sendAllDataToRemote();
-            }
-        };
 
-        if (contents != null) {
-            net.minecraft.core.NonNullList<net.minecraft.world.item.ItemStack> items = net.minecraft.core.NonNullList.withSize(54, net.minecraft.world.item.ItemStack.EMPTY);
-            contents.copyInto(items);
-            for (int i = 0; i < items.size(); i++) {
-                container.setItem(i, items.get(i).copy());
+                player.openMenu(new net.minecraft.world.SimpleMenuProvider(
+                        (id, playerInv, p) -> net.minecraft.world.inventory.ChestMenu.sixRows(id, playerInv, container),
+                        Component.literal("Backpack[" + slotIndex + "]: " + target.getName().getString())
+                ));
+                return 1;
             }
         }
 
-        player.openMenu(new net.minecraft.world.SimpleMenuProvider(
-                (id, playerInv, p) -> net.minecraft.world.inventory.ChestMenu.sixRows(id, playerInv, container),
-                Component.literal("Backpack: " + target.getName().getString())
-        ));
+        // -------- Pass 2: IItemHandler capability walk. --------
+        for (int i = startSlot; i < endSlotEx; i++) {
+            net.minecraft.world.item.ItemStack stack = target.getInventory().getItem(i);
+            if (stack.isEmpty()) continue;
+            java.util.Optional<CapabilityInventoryBridge.Handler> handlerOpt = CapabilityInventoryBridge.resolve(stack);
+            if (handlerOpt.isEmpty()) continue;
+            final CapabilityInventoryBridge.Handler handler = handlerOpt.get();
+            if (!handler.isModifiable()) continue; // read-only handler (rare) — fall through
+            final int slotIndex = i;
+            final net.minecraft.world.item.ItemStack finalStack = stack;
+            final int capSize = handler.getSlots();
+            final int guiSize = 54; // always six-row chest GUI; cap slots beyond capSize are ignored
 
-        return 1;
+            net.minecraft.world.SimpleContainer container = new net.minecraft.world.SimpleContainer(guiSize) {
+                @Override
+                public void setChanged() {
+                    super.setChanged();
+                    int n = Math.min(capSize, this.getContainerSize());
+                    for (int j = 0; j < n; j++) {
+                        handler.setStackInSlot(j, this.getItem(j));
+                    }
+                    target.getInventory().setItem(slotIndex, finalStack);
+                    target.inventoryMenu.sendAllDataToRemote();
+                }
+            };
+
+            int n = Math.min(capSize, container.getContainerSize());
+            for (int j = 0; j < n; j++) {
+                container.setItem(j, handler.getStackInSlot(j));
+            }
+
+            player.openMenu(new net.minecraft.world.SimpleMenuProvider(
+                    (id, inv, p) -> net.minecraft.world.inventory.ChestMenu.sixRows(id, inv, container),
+                    Component.literal("Backpack[" + slotIndex + "]: " + target.getName().getString())));
+            return 1;
+        }
+
+        if (requestedSlot >= 0) {
+            player.sendSystemMessage(Component.literal("No backpack found in slot " + requestedSlot));
+        } else {
+            player.sendSystemMessage(Component.literal("No backpack found"));
+        }
+        return 0;
     }
 
     private static int openEnderChest(CommandContext<CommandSourceStack> ctx, ServerPlayer target) {

@@ -1,0 +1,20 @@
+{
+  "run_id": "backpack-admin-vsu",
+  "started": "2026-06-25",
+  "mode": "delegated",
+  "status": "awaiting-design-approval",
+  "packets": {
+    "P0_core_common_1182":     {"status": "blocked-on-approval", "owner": "parent"},
+    "P1_port_to_1192":         {"status": "queued",  "owner": "subagent-1192", "depends_on": ["P0_core_common_1182"]},
+    "P2_port_to_1201":         {"status": "queued",  "owner": "subagent-1201", "depends_on": ["P0_core_common_1182"]},
+    "P3_port_to_1211_neoforge":{"status": "queued",  "owner": "subagent-1211", "depends_on": ["P0_core_common_1182"]},
+    "P4_integration":          {"status": "queued",  "owner": "parent",        "depends_on": ["P1_port_to_1192","P2_port_to_1201","P3_port_to_1211_neoforge"]}
+  },
+  "approval_gates": [
+    "design-approval-before-P0",
+    "compile-verify-after-each-port",
+    "WeedMeister-go-no-go-before-deploy"
+  ],
+  "delegation_count_planned": 3,
+  "wave_count_planned": 1
+}

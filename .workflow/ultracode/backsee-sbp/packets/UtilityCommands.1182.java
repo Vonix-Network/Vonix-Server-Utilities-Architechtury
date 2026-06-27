@@ -10,13 +10,14 @@ import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
+import net.minecraft.network.chat.TextComponent;
+import net.minecraft.network.protocol.game.ClientboundPlayerInfoPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import network.vonix.serverutilities.VonixServerUtilities;
 import network.vonix.serverutilities.features.FeatureGate;
 import network.vonix.serverutilities.inventory.InvseeContainer;
-import network.vonix.serverutilities.inventory.CapabilityInventoryBridge;
+import network.vonix.serverutilities.inventory.SbpBackpackBridge;
 import network.vonix.serverutilities.inventory.AccessoryHelper;
 import network.vonix.serverutilities.teleport.TeleportManager;
 
@@ -91,33 +92,33 @@ public final class UtilityCommands {
     private static int teleportTo(CommandContext<CommandSourceStack> ctx, ServerPlayer target) {
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
         TeleportManager.getInstance().saveLastLocation(player);
-        player.teleportTo(target.serverLevel(), target.getX(), target.getY(), target.getZ(),
+        player.teleportTo((net.minecraft.server.level.ServerLevel)target.getLevel(), target.getX(), target.getY(), target.getZ(),
                 target.getYRot(), target.getXRot());
-        player.sendSystemMessage(Component.literal("§aTeleported to §e" + target.getName().getString()));
+        player.sendMessage(new TextComponent("§aTeleported to §e" + target.getName().getString()), net.minecraft.Util.NIL_UUID);
         return 1;
     }
 
     private static int teleportPlayerTo(CommandContext<CommandSourceStack> ctx,
                                          ServerPlayer target, ServerPlayer dest) {
         TeleportManager.getInstance().saveLastLocation(target);
-        target.teleportTo(dest.serverLevel(), dest.getX(), dest.getY(), dest.getZ(),
+        target.teleportTo((net.minecraft.server.level.ServerLevel)dest.getLevel(), dest.getX(), dest.getY(), dest.getZ(),
                 dest.getYRot(), dest.getXRot());
-        ctx.getSource().sendSuccess(() -> Component.literal(
+        ctx.getSource().sendSuccess(new TextComponent(
                 "§aTeleported §e" + target.getName().getString() + "§a to §e" + dest.getName().getString()), true);
-        target.sendSystemMessage(Component.literal(
-                "§aYou were teleported to §e" + dest.getName().getString()));
+        target.sendMessage(new TextComponent(
+                "§aYou were teleported to §e" + dest.getName().getString()), net.minecraft.Util.NIL_UUID);
         return 1;
     }
 
     private static int teleportHere(CommandContext<CommandSourceStack> ctx, ServerPlayer target) {
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
         TeleportManager.getInstance().saveLastLocation(target);
-        target.teleportTo(player.serverLevel(), player.getX(), player.getY(), player.getZ(),
+        target.teleportTo((net.minecraft.server.level.ServerLevel)player.getLevel(), player.getX(), player.getY(), player.getZ(),
                 player.getYRot(), player.getXRot());
-        player.sendSystemMessage(Component.literal(
-                "§aTeleported §e" + target.getName().getString() + "§a to you"));
-        target.sendSystemMessage(Component.literal(
-                "§aYou were teleported to §e" + player.getName().getString()));
+        player.sendMessage(new TextComponent(
+                "§aTeleported §e" + target.getName().getString() + "§a to you"), net.minecraft.Util.NIL_UUID);
+        target.sendMessage(new TextComponent(
+                "§aYou were teleported to §e" + player.getName().getString()), net.minecraft.Util.NIL_UUID);
         return 1;
     }
 
@@ -127,14 +128,14 @@ public final class UtilityCommands {
         for (ServerPlayer t : player.server.getPlayerList().getPlayers()) {
             if (t != player) {
                 TeleportManager.getInstance().saveLastLocation(t);
-                t.teleportTo(player.serverLevel(), player.getX(), player.getY(), player.getZ(),
+                t.teleportTo((net.minecraft.server.level.ServerLevel)player.getLevel(), player.getX(), player.getY(), player.getZ(),
                         player.getYRot(), player.getXRot());
-                t.sendSystemMessage(Component.literal(
-                        "§aYou were teleported to §e" + player.getName().getString()));
+                t.sendMessage(new TextComponent(
+                        "§aYou were teleported to §e" + player.getName().getString()), net.minecraft.Util.NIL_UUID);
                 count++;
             }
         }
-        player.sendSystemMessage(Component.literal("§aTeleported §e" + count + "§a players to you"));
+        player.sendMessage(new TextComponent("§aTeleported §e" + count + "§a players to you"), net.minecraft.Util.NIL_UUID);
         return count;
     }
 
@@ -144,18 +145,18 @@ public final class UtilityCommands {
         double y = DoubleArgumentType.getDouble(ctx, "y");
         double z = DoubleArgumentType.getDouble(ctx, "z");
         TeleportManager.getInstance().saveLastLocation(player);
-        player.teleportTo(player.serverLevel(), x, y, z, player.getYRot(), player.getXRot());
-        player.sendSystemMessage(Component.literal(
-                String.format("§aTeleported to §e%.1f, %.1f, %.1f", x, y, z)));
+        player.teleportTo((net.minecraft.server.level.ServerLevel)player.getLevel(), x, y, z, player.getYRot(), player.getXRot());
+        player.sendMessage(new TextComponent(
+                String.format("§aTeleported to §e%.1f, %.1f, %.1f", x, y, z)), net.minecraft.Util.NIL_UUID);
         return 1;
     }
 
     private static int setSpawn(CommandContext<CommandSourceStack> ctx) {
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
         BlockPos pos = player.blockPosition();
-        player.serverLevel().setDefaultSpawnPos(pos, 0);
-        player.sendSystemMessage(Component.literal(
-                String.format("§aSpawn set to §e%d, %d, %d", pos.getX(), pos.getY(), pos.getZ())));
+        ((net.minecraft.server.level.ServerLevel)player.getLevel()).setDefaultSpawnPos(pos, 0);
+        player.sendMessage(new TextComponent(
+                String.format("§aSpawn set to §e%d, %d, %d", pos.getX(), pos.getY(), pos.getZ())), net.minecraft.Util.NIL_UUID);
         return 1;
     }
 
@@ -210,10 +211,10 @@ public final class UtilityCommands {
         // Write-through to SQLite on the DB executor.
         VonixServerUtilities.dbAsync(() ->
                 VonixServerUtilities.getInstance().getDatabase().setNickname(uuid, colored));
-        player.setCustomName(Component.literal(colored));
+        player.setCustomName(new TextComponent(colored));
         player.setCustomNameVisible(false);
         broadcastTabListUpdate(player);
-        player.sendSystemMessage(Component.literal("§aNickname set to: " + colored));
+        player.sendMessage(new TextComponent("§aNickname set to: " + colored), net.minecraft.Util.NIL_UUID);
         return 1;
     }
 
@@ -225,13 +226,13 @@ public final class UtilityCommands {
                 VonixServerUtilities.getInstance().getDatabase().deleteNickname(uuid));
         player.setCustomName(null);
         broadcastTabListUpdate(player);
-        player.sendSystemMessage(Component.literal("§aNickname cleared."));
+        player.sendMessage(new TextComponent("§aNickname cleared."), net.minecraft.Util.NIL_UUID);
         return 1;
     }
 
     private static void broadcastTabListUpdate(ServerPlayer player) {
-        var packet = new ClientboundPlayerInfoUpdatePacket(
-                java.util.EnumSet.of(ClientboundPlayerInfoUpdatePacket.Action.UPDATE_DISPLAY_NAME), java.util.List.of(player));
+        var packet = new ClientboundPlayerInfoPacket(
+                ClientboundPlayerInfoPacket.Action.UPDATE_DISPLAY_NAME, player);
         player.server.getPlayerList().broadcastAll(packet);
     }
 
@@ -239,12 +240,10 @@ public final class UtilityCommands {
 
     private static int showSeen(CommandContext<CommandSourceStack> ctx, String playerName) {
         if (ctx.getSource().getServer().getPlayerList().getPlayerByName(playerName) != null) {
-            ctx.getSource().sendSuccess(
-                    () -> Component.literal("§e" + playerName + " §7is currently §aonline"), false);
+            ctx.getSource().sendSuccess(new TextComponent("§e" + playerName + " §7is currently §aonline"), false);
         } else {
             Long ts = lastSeen.values().stream().findFirst().orElse(null); // placeholder
-            ctx.getSource().sendSuccess(
-                    () -> Component.literal("§e" + playerName + " §7is §coffline"), false);
+            ctx.getSource().sendSuccess(new TextComponent("§e" + playerName + " §7is §coffline"), false);
         }
         return 1;
     }
@@ -254,17 +253,17 @@ public final class UtilityCommands {
         String display = nicknames.getOrDefault(target.getUUID(), name);
         int ping       = target.latency;
         BlockPos pos   = target.blockPosition();
-        String dim     = target.level().dimension().location().toString();
+        String dim     = target.level.dimension().location().toString();
 
-        ctx.getSource().sendSuccess(() -> Component.literal("§6=== §e" + name + " §6==="), false);
-        ctx.getSource().sendSuccess(() -> Component.literal("§7Display: " + display), false);
-        ctx.getSource().sendSuccess(() -> Component.literal("§7UUID: §f" + target.getUUID()), false);
-        ctx.getSource().sendSuccess(() -> Component.literal("§7Ping: §f" + ping + "ms"), false);
-        ctx.getSource().sendSuccess(() -> Component.literal(
+        ctx.getSource().sendSuccess(new TextComponent("§6=== §e" + name + " §6==="), false);
+        ctx.getSource().sendSuccess(new TextComponent("§7Display: " + display), false);
+        ctx.getSource().sendSuccess(new TextComponent("§7UUID: §f" + target.getUUID()), false);
+        ctx.getSource().sendSuccess(new TextComponent("§7Ping: §f" + ping + "ms"), false);
+        ctx.getSource().sendSuccess(new TextComponent(
                 String.format("§7Location: §f%d, %d, %d §7in §f%s", pos.getX(), pos.getY(), pos.getZ(), dim)), false);
-        ctx.getSource().sendSuccess(() -> Component.literal(
+        ctx.getSource().sendSuccess(new TextComponent(
                 "§7Health: §c" + (int) target.getHealth() + "§7/§c" + (int) target.getMaxHealth()), false);
-        ctx.getSource().sendSuccess(() -> Component.literal(
+        ctx.getSource().sendSuccess(new TextComponent(
                 "§7Food: §e" + target.getFoodData().getFoodLevel() + "§7/§e20"), false);
         return 1;
     }
@@ -273,7 +272,7 @@ public final class UtilityCommands {
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
         int ping  = player.latency;
         String col = ping < 50 ? "§a" : ping < 150 ? "§e" : "§c";
-        player.sendSystemMessage(Component.literal("§7Your ping: " + col + ping + "ms"));
+        player.sendMessage(new TextComponent("§7Your ping: " + col + ping + "ms"), net.minecraft.Util.NIL_UUID);
         return 1;
     }
 
@@ -281,15 +280,15 @@ public final class UtilityCommands {
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
         List<String> nearby = new ArrayList<>();
         for (ServerPlayer other : player.server.getPlayerList().getPlayers()) {
-            if (other != player && other.level() == player.level()) {
+            if (other != player && other.level == player.level) {
                 double dist = player.distanceTo(other);
                 if (dist <= radius) nearby.add(String.format("§e%s §7(%.0fm)", other.getName().getString(), dist));
             }
         }
         if (nearby.isEmpty()) {
-            player.sendSystemMessage(Component.literal("§7No players within " + radius + " blocks."));
+            player.sendMessage(new TextComponent("§7No players within " + radius + " blocks."), net.minecraft.Util.NIL_UUID);
         } else {
-            player.sendSystemMessage(Component.literal("§6Nearby: " + String.join(", ", nearby)));
+            player.sendMessage(new TextComponent("§6Nearby: " + String.join(", ", nearby)), net.minecraft.Util.NIL_UUID);
         }
         return 1;
     }
@@ -297,8 +296,8 @@ public final class UtilityCommands {
     private static int getPos(CommandContext<CommandSourceStack> ctx) {
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
         BlockPos pos = player.blockPosition();
-        player.sendSystemMessage(Component.literal(
-                String.format("§7Position: §eX: %d, Y: %d, Z: %d", pos.getX(), pos.getY(), pos.getZ())));
+        player.sendMessage(new TextComponent(
+                String.format("§7Position: §eX: %d, Y: %d, Z: %d", pos.getX(), pos.getY(), pos.getZ())), net.minecraft.Util.NIL_UUID);
         return 1;
     }
 
@@ -306,8 +305,8 @@ public final class UtilityCommands {
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
         int ticks = player.getStats().getValue(net.minecraft.stats.Stats.CUSTOM, net.minecraft.stats.Stats.PLAY_TIME);
         long seconds = ticks / 20L;
-        player.sendSystemMessage(Component.literal(
-                String.format("§7Playtime: §e%dh %dm", seconds / 3600, (seconds % 3600) / 60)));
+        player.sendMessage(new TextComponent(
+                String.format("§7Playtime: §e%dh %dm", seconds / 3600, (seconds % 3600) / 60)), net.minecraft.Util.NIL_UUID);
         return 1;
     }
 
@@ -320,8 +319,7 @@ public final class UtilityCommands {
     private static int showPlayerList(CommandContext<CommandSourceStack> ctx) {
         var players = ctx.getSource().getServer().getPlayerList().getPlayers();
         int max     = ctx.getSource().getServer().getMaxPlayers();
-        ctx.getSource().sendSuccess(
-                () -> Component.literal("§6Players Online: §e" + players.size() + "/" + max), false);
+        ctx.getSource().sendSuccess(new TextComponent("§6Players Online: §e" + players.size() + "/" + max), false);
         StringBuilder sb = new StringBuilder();
         for (ServerPlayer p : players) {
             if (!sb.isEmpty()) sb.append("§7, ");
@@ -329,7 +327,7 @@ public final class UtilityCommands {
             sb.append(nick != null ? nick : "§e" + p.getName().getString());
         }
         String list = sb.toString();
-        ctx.getSource().sendSuccess(() -> Component.literal(list), false);
+        ctx.getSource().sendSuccess(new TextComponent(list), false);
         return 1;
     }
 
@@ -373,13 +371,13 @@ public final class UtilityCommands {
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer sender)) return 0;
         Set<UUID> ignored = ignoreList.getOrDefault(target.getUUID(), Set.of());
         if (ignored.contains(sender.getUUID())) {
-            sender.sendSystemMessage(Component.literal("§cThis player is ignoring you."));
+            sender.sendMessage(new TextComponent("§cThis player is ignoring you."), net.minecraft.Util.NIL_UUID);
             return 0;
         }
-        sender.sendSystemMessage(Component.literal(
-                "§7[§6me §7→ §e" + target.getName().getString() + "§7] §f" + message));
-        target.sendSystemMessage(Component.literal(
-                "§7[§e" + sender.getName().getString() + " §7→ §6me§7] §f" + message));
+        sender.sendMessage(new TextComponent(
+                "§7[§6me §7→ §e" + target.getName().getString() + "§7] §f" + message), net.minecraft.Util.NIL_UUID);
+        target.sendMessage(new TextComponent(
+                "§7[§e" + sender.getName().getString() + " §7→ §6me§7] §f" + message), net.minecraft.Util.NIL_UUID);
         lastMessaged.put(sender.getUUID(), target.getUUID());
         lastMessaged.put(target.getUUID(), sender.getUUID());
         return 1;
@@ -389,12 +387,12 @@ public final class UtilityCommands {
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer sender)) return 0;
         UUID lastUuid = lastMessaged.get(sender.getUUID());
         if (lastUuid == null) {
-            sender.sendSystemMessage(Component.literal("§cNo one to reply to."));
+            sender.sendMessage(new TextComponent("§cNo one to reply to."), net.minecraft.Util.NIL_UUID);
             return 0;
         }
         ServerPlayer target = sender.server.getPlayerList().getPlayer(lastUuid);
         if (target == null) {
-            sender.sendSystemMessage(Component.literal("§cPlayer is offline."));
+            sender.sendMessage(new TextComponent("§cPlayer is offline."), net.minecraft.Util.NIL_UUID);
             return 0;
         }
         return sendMessage(ctx, target, message);
@@ -408,12 +406,12 @@ public final class UtilityCommands {
         if (ignored.remove(tgt)) {
             VonixServerUtilities.dbAsync(() ->
                     VonixServerUtilities.getInstance().getDatabase().removeIgnore(owner, tgt));
-            player.sendSystemMessage(Component.literal("§aNo longer ignoring §e" + target.getName().getString()));
+            player.sendMessage(new TextComponent("§aNo longer ignoring §e" + target.getName().getString()), net.minecraft.Util.NIL_UUID);
         } else {
             ignored.add(tgt);
             VonixServerUtilities.dbAsync(() ->
                     VonixServerUtilities.getInstance().getDatabase().addIgnore(owner, tgt));
-            player.sendSystemMessage(Component.literal("§cNow ignoring §e" + target.getName().getString()));
+            player.sendMessage(new TextComponent("§cNow ignoring §e" + target.getName().getString()), net.minecraft.Util.NIL_UUID);
         }
         return 1;
     }
@@ -444,13 +442,13 @@ public final class UtilityCommands {
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
         var hand = player.getMainHandItem();
         if (hand.isEmpty()) {
-            player.sendSystemMessage(Component.literal("§cHold an item to wear as a hat."));
+            player.sendMessage(new TextComponent("§cHold an item to wear as a hat."), net.minecraft.Util.NIL_UUID);
             return 0;
         }
         var helmet = player.getInventory().armor.get(3);
         player.getInventory().armor.set(3, hand.copy());
         player.setItemInHand(InteractionHand.MAIN_HAND, helmet);
-        player.sendSystemMessage(Component.literal("§aWearing §e" + hand.getHoverName().getString()));
+        player.sendMessage(new TextComponent("§aWearing §e" + hand.getHoverName().getString()), net.minecraft.Util.NIL_UUID);
         return 1;
     }
 
@@ -459,7 +457,7 @@ public final class UtilityCommands {
         var hand = player.getMainHandItem();
         if (hand.isEmpty()) return 0;
         hand.setCount(hand.getMaxStackSize());
-        player.sendSystemMessage(Component.literal("§aStack filled to §e" + hand.getCount()));
+        player.sendMessage(new TextComponent("§aStack filled to §e" + hand.getCount()), net.minecraft.Util.NIL_UUID);
         return 1;
     }
 
@@ -467,7 +465,7 @@ public final class UtilityCommands {
         if (target == null && ctx.getSource().getEntity() instanceof ServerPlayer p) target = p;
         if (target == null) return 0;
         target.getInventory().clearContent();
-        target.sendSystemMessage(Component.literal("§aInventory cleared."));
+        target.sendMessage(new TextComponent("§aInventory cleared."), net.minecraft.Util.NIL_UUID);
         return 1;
     }
 
@@ -475,11 +473,11 @@ public final class UtilityCommands {
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
         var hand = player.getMainHandItem();
         if (hand.isEmpty() || !hand.isDamageableItem()) {
-            player.sendSystemMessage(Component.literal("§cHold a repairable item."));
+            player.sendMessage(new TextComponent("§cHold a repairable item."), net.minecraft.Util.NIL_UUID);
             return 0;
         }
         hand.setDamageValue(0);
-        player.sendSystemMessage(Component.literal("§aItem repaired."));
+        player.sendMessage(new TextComponent("§aItem repaired."), net.minecraft.Util.NIL_UUID);
         return 1;
     }
 
@@ -541,7 +539,7 @@ public final class UtilityCommands {
     private static int broadcast(CommandContext<CommandSourceStack> ctx, String message) {
         String colored = message.replace("&", "§");
         for (ServerPlayer p : ctx.getSource().getServer().getPlayerList().getPlayers()) {
-            p.sendSystemMessage(Component.literal("§4[Broadcast] §f" + colored));
+            p.sendMessage(new TextComponent("§4[Broadcast] §f" + colored), net.minecraft.Util.NIL_UUID);
         }
         return 1;
     }
@@ -551,14 +549,14 @@ public final class UtilityCommands {
         long used   = (rt.totalMemory() - rt.freeMemory()) / 1024 / 1024;
         long max    = rt.maxMemory() / 1024 / 1024;
         System.gc();
-        ctx.getSource().sendSuccess(() -> Component.literal("§6=== Server Stats ==="), false);
-        ctx.getSource().sendSuccess(() -> Component.literal("§7Memory: §e" + used + "MB §7/ §e" + max + "MB"), false);
-        ctx.getSource().sendSuccess(() -> Component.literal("§7Threads: §e" + Thread.activeCount()), false);
+        ctx.getSource().sendSuccess(new TextComponent("§6=== Server Stats ==="), false);
+        ctx.getSource().sendSuccess(new TextComponent("§7Memory: §e" + used + "MB §7/ §e" + max + "MB"), false);
+        ctx.getSource().sendSuccess(new TextComponent("§7Threads: §e" + Thread.activeCount()), false);
         return 1;
     }
 
     private static int showLag(CommandContext<CommandSourceStack> ctx) {
-        ctx.getSource().sendSuccess(() -> Component.literal("§7TPS: §acheck F3 for debug info"), false);
+        ctx.getSource().sendSuccess(new TextComponent("§7TPS: §acheck F3 for debug info"), false);
         return 1;
     }
 
@@ -567,20 +565,16 @@ public final class UtilityCommands {
         InvseeContainer view = new InvseeContainer(target);
         player.openMenu(new net.minecraft.world.SimpleMenuProvider(
                 (id, playerInv, p) -> net.minecraft.world.inventory.ChestMenu.sixRows(id, playerInv, view),
-                Component.literal("\u00a76[INVSEE] \u00a7e" + target.getName().getString())));
+                new TextComponent("\u00a76[INVSEE] \u00a7e" + target.getName().getString())));
         return 1;
     }
 
     private static int openBackpack(CommandContext<CommandSourceStack> ctx, ServerPlayer target, int requestedSlot) {
         // Layered detection:
-        //   1. Universal Forge/NeoForge IItemHandler capability walk (reflection bridge — covers Sophisticated
-        //      Backpacks/Storage, vanilla shulker via default cap provider, Iron Chests shulker, Traveler's
-        //      Backpack, Iron Backpacks, FunctionalStorage drawers-as-item, etc.).
-        //   2. Legacy NBT layout (raw `Items` / `inventory` / `BlockEntityTag.Items` lists) — fallback for
-        //      items that store inventory in NBT without exposing the capability.
+        //   1. Legacy NBT layout (vanilla shulker boxes, Iron Chests in-item, etc.) — Items / inventory / BlockEntityTag.Items
+        //   2. Sophisticated Backpacks — item carries `contentsUuid`; real contents live in BackpackStorage saved-data (soft-dep reflection bridge).
         //   3. None found → "No backpack found"
-        // PORT-NOTE: 1.21 uses DataComponents.CONTAINER + ItemContainerContents (added in 1.20.5). On 1.20.1
-        // we read/write the legacy NBT layout.
+        // PORT-NOTE: 1.21 used DataComponents.CONTAINER + ItemContainerContents (added in 1.20.5). On 1.18.2 we read/write the legacy NBT layout.
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
 
         int startSlot = requestedSlot >= 0 ? requestedSlot : 0;
@@ -588,44 +582,7 @@ public final class UtilityCommands {
                 ? Math.min(requestedSlot + 1, target.getInventory().getContainerSize())
                 : target.getInventory().getContainerSize();
 
-        // -------- Pass 1: IItemHandler capability walk. --------
-        for (int i = startSlot; i < endSlotEx; i++) {
-            net.minecraft.world.item.ItemStack stack = target.getInventory().getItem(i);
-            if (stack.isEmpty()) continue;
-            java.util.Optional<CapabilityInventoryBridge.Handler> handlerOpt = CapabilityInventoryBridge.resolve(stack);
-            if (handlerOpt.isEmpty()) continue;
-            final CapabilityInventoryBridge.Handler handler = handlerOpt.get();
-            if (!handler.isModifiable()) continue; // read-only handler (rare) — fall through to legacy pass
-            final int slotIndex = i;
-            final net.minecraft.world.item.ItemStack finalStack = stack;
-            final int capSize = handler.getSlots();
-            final int guiSize = 54; // always six-row chest GUI; cap slots beyond capSize are ignored
-
-            net.minecraft.world.SimpleContainer container = new net.minecraft.world.SimpleContainer(guiSize) {
-                @Override
-                public void setChanged() {
-                    super.setChanged();
-                    int n = Math.min(capSize, this.getContainerSize());
-                    for (int j = 0; j < n; j++) {
-                        handler.setStackInSlot(j, this.getItem(j));
-                    }
-                    target.getInventory().setItem(slotIndex, finalStack);
-                    target.inventoryMenu.sendAllDataToRemote();
-                }
-            };
-
-            int n = Math.min(capSize, container.getContainerSize());
-            for (int j = 0; j < n; j++) {
-                container.setItem(j, handler.getStackInSlot(j));
-            }
-
-            player.openMenu(new net.minecraft.world.SimpleMenuProvider(
-                    (id, inv, p) -> net.minecraft.world.inventory.ChestMenu.sixRows(id, inv, container),
-                    Component.literal("Backpack[" + slotIndex + "]: " + target.getName().getString())));
-            return 1;
-        }
-
-        // -------- Pass 2: legacy NBT-bearing containers (unchanged behaviour from prior /backsee). --------
+        // -------- Pass 1: legacy NBT-bearing containers (unchanged behaviour from prior /backsee). --------
         for (int i = startSlot; i < endSlotEx; i++) {
             net.minecraft.world.item.ItemStack stack = target.getInventory().getItem(i);
             net.minecraft.nbt.CompoundTag tag = stack.getTag();
@@ -682,16 +639,66 @@ public final class UtilityCommands {
 
                     player.openMenu(new net.minecraft.world.SimpleMenuProvider(
                             (id, inv, p) -> net.minecraft.world.inventory.ChestMenu.sixRows(id, inv, container),
-                            Component.literal("Backpack[" + i + "]: " + target.getName().getString())));
+                            new TextComponent("Backpack[" + i + "]: " + target.getName().getString())));
                     return 1;
                 }
             }
         }
 
+        // -------- Pass 2: Sophisticated Backpacks (contentsUuid → BackpackStorage). --------
+        if (SbpBackpackBridge.isAvailable()) {
+            for (int i = startSlot; i < endSlotEx; i++) {
+                net.minecraft.world.item.ItemStack stack = target.getInventory().getItem(i);
+                java.util.Optional<java.util.UUID> uuidOpt = SbpBackpackBridge.readContentsUuid(stack);
+                if (uuidOpt.isEmpty()) continue;
+                java.util.UUID uuid = uuidOpt.get();
+                java.util.Optional<net.minecraft.nbt.CompoundTag> rootOpt = SbpBackpackBridge.getContentsRoot(uuid);
+                if (rootOpt.isEmpty()) continue;
+                final net.minecraft.nbt.CompoundTag root = rootOpt.get();
+                final int slotIndex = i;
+
+                net.minecraft.world.SimpleContainer container = new net.minecraft.world.SimpleContainer(54) {
+                    @Override
+                    public void setChanged() {
+                        super.setChanged();
+                        net.minecraft.nbt.ListTag newItems = new net.minecraft.nbt.ListTag();
+                        for (int j = 0; j < this.getContainerSize(); j++) {
+                            net.minecraft.world.item.ItemStack item = this.getItem(j);
+                            if (!item.isEmpty()) {
+                                net.minecraft.nbt.CompoundTag itemTag = new net.minecraft.nbt.CompoundTag();
+                                itemTag.putByte("Slot", (byte) j);
+                                item.save(itemTag);
+                                newItems.add(itemTag);
+                            }
+                        }
+                        SbpBackpackBridge.setItemsList(root, newItems);
+                        SbpBackpackBridge.markDirty();
+                    }
+                };
+
+                java.util.Optional<net.minecraft.nbt.ListTag> itemsOpt = SbpBackpackBridge.getItemsList(root);
+                if (itemsOpt.isPresent()) {
+                    net.minecraft.nbt.ListTag items = itemsOpt.get();
+                    for (int j = 0; j < items.size(); j++) {
+                        net.minecraft.nbt.CompoundTag itemTag = items.getCompound(j);
+                        int slot = itemTag.getByte("Slot") & 255;
+                        if (slot >= 0 && slot < container.getContainerSize()) {
+                            container.setItem(slot, net.minecraft.world.item.ItemStack.of(itemTag));
+                        }
+                    }
+                }
+
+                player.openMenu(new net.minecraft.world.SimpleMenuProvider(
+                        (id, inv, p) -> net.minecraft.world.inventory.ChestMenu.sixRows(id, inv, container),
+                        new TextComponent("SBP[" + slotIndex + "]: " + target.getName().getString())));
+                return 1;
+            }
+        }
+
         if (requestedSlot >= 0) {
-            player.sendSystemMessage(Component.literal("No backpack found in slot " + requestedSlot));
+            player.sendMessage(new TextComponent("No backpack found in slot " + requestedSlot), net.minecraft.Util.NIL_UUID);
         } else {
-            player.sendSystemMessage(Component.literal("No backpack found"));
+            player.sendMessage(new TextComponent("No backpack found"), net.minecraft.Util.NIL_UUID);
         }
         return 0;
     }
@@ -702,7 +709,7 @@ public final class UtilityCommands {
         player.openMenu(new net.minecraft.world.SimpleMenuProvider(
                 (id, inv, p) -> net.minecraft.world.inventory.ChestMenu.threeRows(id, inv,
                         enderTarget.getEnderChestInventory()),
-                Component.literal("Ender Chest")));
+                new TextComponent("Ender Chest")));
         return 1;
     }
 
@@ -717,8 +724,8 @@ public final class UtilityCommands {
         player.openMenu(new net.minecraft.world.SimpleMenuProvider(
                 (id, inv, p) -> new net.minecraft.world.inventory.CraftingMenu(id, inv,
                         net.minecraft.world.inventory.ContainerLevelAccess.create(
-                                player.level(), player.blockPosition())),
-                Component.literal("Crafting")));
+                                player.level, player.blockPosition())),
+                new TextComponent("Crafting")));
         return 1;
     }
 
@@ -727,8 +734,8 @@ public final class UtilityCommands {
         player.openMenu(new net.minecraft.world.SimpleMenuProvider(
                 (id, inv, p) -> new net.minecraft.world.inventory.AnvilMenu(id, inv,
                         net.minecraft.world.inventory.ContainerLevelAccess.create(
-                                player.level(), player.blockPosition())),
-                Component.literal("Anvil")));
+                                player.level, player.blockPosition())),
+                new TextComponent("Anvil")));
         return 1;
     }
 
@@ -764,7 +771,7 @@ public final class UtilityCommands {
         // Re-apply persisted nickname so it survives restarts.
         String nick = nicknames.get(player.getUUID());
         if (nick != null) {
-            player.setCustomName(Component.literal(nick));
+            player.setCustomName(new TextComponent(nick));
             player.setCustomNameVisible(false);
             broadcastTabListUpdate(player);
         }

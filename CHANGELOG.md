@@ -5,6 +5,63 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-06-27
+
+Backpack-viewer rewrite. Backwards-compatible: `/backsee <player>` keeps
+its prior behaviour on any modpack that does not expose item inventories
+through the Forge / NeoForge `IItemHandler` capability. No new soft-deps.
+
+### Added
+- **Universal `IItemHandler` capability walk in `/backsee`**
+  (`inventory/CapabilityInventoryBridge.java`,
+  `command/UtilityCommands.openBackpack`): `/backsee <target>` now opens
+  any backpack-style item that exposes the Forge / NeoForge
+  `IItemHandler` capability — Sophisticated Backpacks & Storage shulkers,
+  vanilla shulker boxes (via the Forge default cap provider), Iron Chests
+  shulkers, Traveler's Backpack, Iron Backpacks, FunctionalStorage
+  drawers-as-item, and any other well-behaved capability-exposing item.
+  Edits made through the GUI are written back through
+  `IItemHandlerModifiable#setStackInSlot`, so each item's own capability
+  provider handles persistence — VSU does not need to know the item's
+  storage layout. The capability system is detected and called by
+  reflection only; `common/` remains platform-agnostic and the same
+  source compiles on all 4 templates.
+- **Optional `slot` argument on `/backsee`** (`/backsee <target> [0..40]`):
+  scan only the named inventory slot instead of the player's full
+  inventory. Backwards-compatible — calling `/backsee <target>` without a
+  slot keeps the old "first match wins" behaviour.
+
+### Changed
+- `/backsee` pass order: (1) `IItemHandler` capability walk, (2) legacy
+  raw-NBT walk (vanilla `Items` / `inventory` / `BlockEntityTag.Items`
+  lists). On 1.21.1 NeoForge the order is (1) vanilla
+  `DataComponents.CONTAINER`, (2) `IItemHandler` capability walk.
+
+### Removed
+- `inventory/SbpBackpackBridge.java` (the 1.3.0 release candidate's
+  Sophisticated-Backpacks-specific reflection bridge into
+  `BackpackStorage` saved-data). Subsumed by the universal capability
+  walk — SBP exposes its inventory through `IItemHandler` like every
+  other capability-aware item, so a single bridge handles it correctly
+  without hard-coding SBP's class names or NBT layout.
+
+### Pitfalls handled
+- Fabric (no Forge cap system on the classpath): probe returns
+  `isAvailable() == false` once at startup, the capability pass is a
+  no-op, and `/backsee` falls through to the legacy NBT walk.
+- NeoForge `Capabilities$ItemHandler.ITEM` vs Forge
+  `ForgeCapabilities.ITEM_HANDLER` vs older Forge
+  `CapabilityItemHandler.ITEM_HANDLER_CAPABILITY`: probed in that order,
+  first hit wins, the rest are silently absent.
+- `IItemHandler` package location (`net.neoforged.neoforge.items` vs
+  `net.minecraftforge.items`): both are probed; whichever loads is used.
+- Read-only `IItemHandler`s (no `IItemHandlerModifiable`): capability
+  pass skips them and falls through to the legacy NBT walk so the GUI
+  doesn't silently swallow edits.
+- Every reflective call is wrapped — any `LinkageError` /
+  `ReflectiveOperationException` logs a single WARN and returns
+  `Optional.empty()`. No `NoClassDefFoundError` can escape the bridge.
+
 ## [1.2.0] - 2026-06-23
 
 Donation-rank automation and Venary site integration. All changes are

@@ -5,6 +5,30 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ---
 
+## [1.3.0] — 2026-06-27
+
+### Added
+- `/backsee <target> [slot]` now opens **any backpack-style item that
+  exposes the NeoForge `IItemHandler` capability** — Sophisticated
+  Backpacks/Storage, vanilla shulker boxes, Iron Chests shulkers,
+  Traveler's Backpack, Iron Backpacks, FunctionalStorage drawers-as-item,
+  etc. Reflection-only — VSU still loads on Fabric where the capability
+  system is absent.
+- 1.21.1 specifically: the bridge probes
+  `net.neoforged.neoforge.capabilities.Capabilities$ItemHandler#ITEM`
+  (NeoForge's `ItemCapability<IItemHandler, Void>`); the existing
+  vanilla `DataComponents.CONTAINER` pass for shulker boxes / bundles
+  stays intact and runs first.
+- Optional `slot` argument on `/backsee` for explicit per-slot targeting.
+
+### Removed
+- `inventory/SbpBackpackBridge.java` (the 1.3.0 RC's
+  Sophisticated-Backpacks-specific reflection bridge into
+  `BackpackStorage` saved-data). Subsumed by the universal capability
+  walk.
+
+---
+
 ## [1.0.1] — 2026-04-19
 
 ### Fixed
