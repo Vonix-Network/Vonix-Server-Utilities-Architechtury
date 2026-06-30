@@ -15,6 +15,7 @@ import network.vonix.serverutilities.VonixServerUtilities;
 import network.vonix.serverutilities.admin.AdminManager;
 import network.vonix.serverutilities.config.ModConfig;
 import network.vonix.serverutilities.features.FeatureGate;
+import network.vonix.serverutilities.features.PermissionGate;
 import network.vonix.serverutilities.homes.HomeManager;
 import network.vonix.serverutilities.kits.KitManager;
 import network.vonix.serverutilities.teleport.TeleportManager;
@@ -57,24 +58,24 @@ public final class ModCommands {
 
     private static void registerHome(CommandDispatcher<CommandSourceStack> d) {
         d.register(Commands.literal("home")
-                .requires(FeatureGate.requires("homes"))
+                .requires(PermissionGate.requires("homes", "vsu.command.home", 0))
                 .then(Commands.argument("name", StringArgumentType.word())
                         .executes(ctx -> goHome(ctx, StringArgumentType.getString(ctx, "name"))))
                 .executes(ctx -> goHome(ctx, "home")));
 
         d.register(Commands.literal("sethome")
-                .requires(FeatureGate.requires("homes"))
+                .requires(PermissionGate.requires("homes", "vsu.command.sethome", 0))
                 .then(Commands.argument("name", StringArgumentType.word())
                         .executes(ctx -> setHome(ctx, StringArgumentType.getString(ctx, "name"))))
                 .executes(ctx -> setHome(ctx, "home")));
 
         d.register(Commands.literal("delhome")
-                .requires(FeatureGate.requires("homes"))
+                .requires(PermissionGate.requires("homes", "vsu.command.sethome", 0))
                 .then(Commands.argument("name", StringArgumentType.word())
                         .executes(ctx -> delHome(ctx, StringArgumentType.getString(ctx, "name")))));
 
         d.register(Commands.literal("homes")
-                .requires(FeatureGate.requires("homes"))
+                .requires(PermissionGate.requires("homes", "vsu.command.home", 0))
                 .executes(ModCommands::listHomes));
     }
 
@@ -172,20 +173,20 @@ public final class ModCommands {
 
     private static void registerTpa(CommandDispatcher<CommandSourceStack> d) {
         d.register(Commands.literal("tpa")
-                .requires(FeatureGate.requires("tpa"))
+                .requires(PermissionGate.requires("tpa", "vsu.command.tpa", 0))
                 .then(Commands.argument("player", EntityArgument.player())
                         .executes(ctx -> sendTpa(ctx, false))));
 
         d.register(Commands.literal("tpahere")
-                .requires(FeatureGate.requires("tpa"))
+                .requires(PermissionGate.requires("tpa", "vsu.command.tpa", 0))
                 .then(Commands.argument("player", EntityArgument.player())
                         .executes(ctx -> sendTpa(ctx, true))));
 
         d.register(Commands.literal("tpaccept")
-                .requires(FeatureGate.requires("tpa"))
+                .requires(PermissionGate.requires("tpa", "vsu.command.tpa", 0))
                 .executes(ModCommands::tpAccept));
         d.register(Commands.literal("tpdeny")
-                .requires(FeatureGate.requires("tpa"))
+                .requires(PermissionGate.requires("tpa", "vsu.command.tpa", 0))
                 .executes(ModCommands::tpDeny));
     }
 
@@ -250,10 +251,10 @@ public final class ModCommands {
 
     private static void registerBack(CommandDispatcher<CommandSourceStack> d) {
         d.register(Commands.literal("back")
-                .requires(FeatureGate.requires("back"))
+                .requires(PermissionGate.requires("back", "vsu.command.back", 0))
                 .executes(ModCommands::back));
         d.register(Commands.literal("backdeath")
-                .requires(FeatureGate.requires("back"))
+                .requires(PermissionGate.requires("back", "vsu.command.back", 0))
                 .executes(ModCommands::backDeath));
     }
 
@@ -311,22 +312,22 @@ public final class ModCommands {
 
     private static void registerWarps(CommandDispatcher<CommandSourceStack> d) {
         d.register(Commands.literal("warp")
-                .requires(FeatureGate.requires("warps"))
+                .requires(PermissionGate.requires("warps", "vsu.command.warp", 0))
                 .then(Commands.argument("name", StringArgumentType.word())
                         .executes(ctx -> teleportWarp(ctx, StringArgumentType.getString(ctx, "name"))))
                 .executes(ModCommands::listWarps));
 
         d.register(Commands.literal("warps")
-                .requires(FeatureGate.requires("warps"))
+                .requires(PermissionGate.requires("warps", "vsu.command.warp", 0))
                 .executes(ModCommands::listWarps));
 
         d.register(Commands.literal("setwarp")
-                .requires(FeatureGate.requires("warps", s -> s.hasPermission(3)))
+                .requires(PermissionGate.requires("warps", "vsu.admin.warp", 3))
                 .then(Commands.argument("name", StringArgumentType.word())
                         .executes(ctx -> setWarp(ctx, StringArgumentType.getString(ctx, "name")))));
 
         d.register(Commands.literal("delwarp")
-                .requires(FeatureGate.requires("warps", s -> s.hasPermission(3)))
+                .requires(PermissionGate.requires("warps", "vsu.admin.warp", 3))
                 .then(Commands.argument("name", StringArgumentType.word())
                         .executes(ctx -> deleteWarp(ctx, StringArgumentType.getString(ctx, "name")))));
     }
@@ -414,16 +415,16 @@ public final class ModCommands {
 
     private static void registerKits(CommandDispatcher<CommandSourceStack> d) {
         d.register(Commands.literal("kit")
-                .requires(FeatureGate.requires("kits"))
+                .requires(PermissionGate.requires("kits", "vsu.command.kit", 0))
                 .then(Commands.literal("reload")
-                        .requires(s -> s.hasPermission(3))
+                        .requires(PermissionGate.requires("vsu.admin.manage", 3))
                         .executes(ModCommands::reloadKits))
                 .then(Commands.argument("name", StringArgumentType.word())
                         .executes(ctx -> kitCommand(ctx, StringArgumentType.getString(ctx, "name"))))
                 .executes(ModCommands::listKits));
 
         d.register(Commands.literal("kits")
-                .requires(FeatureGate.requires("kits"))
+                .requires(PermissionGate.requires("kits", "vsu.command.kit", 0))
                 .executes(ModCommands::listKits));
     }
 
@@ -480,7 +481,7 @@ public final class ModCommands {
 
     private static void registerAdmin(CommandDispatcher<CommandSourceStack> d) {
         d.register(Commands.literal("heal")
-                .requires(FeatureGate.requires("admin_tools", s -> s.hasPermission(2)))
+                .requires(PermissionGate.requires("admin_tools", "vsu.admin.heal", 2))
                 .executes(ctx -> {
                     ServerPlayer p = ctx.getSource().getPlayer();
                     if (p != null) AdminManager.getInstance().healPlayer(p);
@@ -495,7 +496,7 @@ public final class ModCommands {
                         })));
 
         d.register(Commands.literal("feed")
-                .requires(FeatureGate.requires("admin_tools", s -> s.hasPermission(2)))
+                .requires(PermissionGate.requires("admin_tools", "vsu.admin.heal", 2))
                 .executes(ctx -> {
                     ServerPlayer p = ctx.getSource().getPlayer();
                     if (p != null) AdminManager.getInstance().feedPlayer(p);
@@ -510,7 +511,7 @@ public final class ModCommands {
                         })));
 
         d.register(Commands.literal("fly")
-                .requires(FeatureGate.requires("admin_tools", s -> s.hasPermission(2)))
+                .requires(PermissionGate.requires("admin_tools", "vsu.admin.fly", 2))
                 .executes(ctx -> {
                     ServerPlayer p = ctx.getSource().getPlayer();
                     if (p != null) AdminManager.getInstance().toggleFly(p);
@@ -523,7 +524,7 @@ public final class ModCommands {
                         })));
 
         d.register(Commands.literal("god")
-                .requires(FeatureGate.requires("admin_tools", s -> s.hasPermission(2)))
+                .requires(PermissionGate.requires("admin_tools", "vsu.admin.god", 2))
                 .executes(ctx -> {
                     ServerPlayer p = ctx.getSource().getPlayer();
                     if (p != null) AdminManager.getInstance().toggleGodMode(p);
@@ -531,7 +532,7 @@ public final class ModCommands {
                 }));
 
         d.register(Commands.literal("vanish")
-                .requires(FeatureGate.requires("admin_tools", s -> s.hasPermission(2)))
+                .requires(PermissionGate.requires("admin_tools", "vsu.admin.vanish", 2))
                 .executes(ctx -> {
                     ServerPlayer p = ctx.getSource().getPlayer();
                     if (p != null) AdminManager.getInstance().toggleVanish(p, ctx.getSource().getServer());
@@ -539,7 +540,7 @@ public final class ModCommands {
                 }));
 
         d.register(Commands.literal("gm")
-                .requires(FeatureGate.requires("admin_tools", s -> s.hasPermission(2)))
+                .requires(PermissionGate.requires("admin_tools", "vsu.admin.gamemode", 2))
                 .then(Commands.literal("0").executes(ctx -> setGameMode(ctx, net.minecraft.world.level.GameType.SURVIVAL)))
                 .then(Commands.literal("1").executes(ctx -> setGameMode(ctx, net.minecraft.world.level.GameType.CREATIVE)))
                 .then(Commands.literal("2").executes(ctx -> setGameMode(ctx, net.minecraft.world.level.GameType.ADVENTURE)))
@@ -565,7 +566,7 @@ public final class ModCommands {
 
     private static void registerSpawn(CommandDispatcher<CommandSourceStack> d) {
         d.register(Commands.literal("spawn")
-                .requires(FeatureGate.requires("spawn"))
+                .requires(PermissionGate.requires("spawn", "vsu.command.spawn", 0))
                 .executes(ctx -> {
             ServerPlayer p = ctx.getSource().getPlayer();
             if (p == null) return 0;
@@ -584,7 +585,7 @@ public final class ModCommands {
 
     private static void registerVonixSu(CommandDispatcher<CommandSourceStack> d) {
         d.register(Commands.literal("vonixsu")
-                .requires(s -> s.hasPermission(3))
+                .requires(PermissionGate.requires("vsu.admin.manage", 3))
                 .then(Commands.literal("version").executes(ModCommands::showVersion))
                 .then(Commands.literal("status").executes(ModCommands::showStatus))
                 .then(Commands.literal("reload")

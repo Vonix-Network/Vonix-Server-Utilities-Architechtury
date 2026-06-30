@@ -161,6 +161,26 @@ public final class LuckPermsBridge {
         }
     }
 
+    /**
+     * Synchronous, cached permission check for {@code player} against
+     * {@code node}. Returns {@code false} on any failure path: LP absent,
+     * user not loaded, exception thrown — fail-closed by design.
+     *
+     * <p>Callers ({@code PermissionGate}) gate this behind {@link #isPresent()},
+     * so a {@code false} returned here from an LP-present server unambiguously
+     * means "user doesn't hold the node" and not "couldn't check".
+     */
+    public static boolean hasPermission(UUID player, String node) {
+        if (!LP_PRESENT) return false;
+        if (player == null || node == null || node.isEmpty()) return false;
+        try {
+            return LuckPermsBridgeImpl.hasPermission(player, node);
+        } catch (LinkageError | RuntimeException t) {
+            logBridgeFailureOnce("hasPermission", t);
+            return false;
+        }
+    }
+
     private static void logBridgeFailureOnce(String where, Throwable t) {
         if (warnedAbsent.compareAndSet(false, true)) {
             VonixServerUtilities.LOGGER.warn(

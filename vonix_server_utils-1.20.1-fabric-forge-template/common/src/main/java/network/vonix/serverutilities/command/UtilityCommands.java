@@ -17,7 +17,7 @@ import network.vonix.serverutilities.VonixServerUtilities;
 import network.vonix.serverutilities.api.InventoryProvider;
 import network.vonix.serverutilities.api.InventoryProviderRegistry;
 import network.vonix.serverutilities.api.InventoryView;
-import network.vonix.serverutilities.features.FeatureGate;
+import network.vonix.serverutilities.features.PermissionGate;
 import network.vonix.serverutilities.inventory.InvseeContainer;
 import network.vonix.serverutilities.inventory.AccessoryHelper;
 import network.vonix.serverutilities.teleport.TeleportManager;
@@ -57,7 +57,7 @@ public final class UtilityCommands {
     private static void registerTeleportCommands(CommandDispatcher<CommandSourceStack> d) {
         // /tp <player>  or  /tp <target> <destination>
         d.register(Commands.literal("tp")
-                .requires(FeatureGate.requires("teleport_admin", s -> s.hasPermission(2)))
+                .requires(PermissionGate.requires("teleport_admin", "vsu.admin.teleport", 2))
                 .then(Commands.argument("target", EntityArgument.player())
                         .executes(ctx -> teleportTo(ctx, EntityArgument.getPlayer(ctx, "target")))
                         .then(Commands.argument("destination", EntityArgument.player())
@@ -67,18 +67,18 @@ public final class UtilityCommands {
 
         // /tphere <player>
         d.register(Commands.literal("tphere")
-                .requires(FeatureGate.requires("teleport_admin", s -> s.hasPermission(2)))
+                .requires(PermissionGate.requires("teleport_admin", "vsu.admin.teleport", 2))
                 .then(Commands.argument("target", EntityArgument.player())
                         .executes(ctx -> teleportHere(ctx, EntityArgument.getPlayer(ctx, "target")))));
 
         // /tpall
         d.register(Commands.literal("tpall")
-                .requires(FeatureGate.requires("teleport_admin", s -> s.hasPermission(2)))
+                .requires(PermissionGate.requires("teleport_admin", "vsu.admin.teleport", 2))
                 .executes(UtilityCommands::teleportAll));
 
         // /tppos <x> <y> <z>
         d.register(Commands.literal("tppos")
-                .requires(FeatureGate.requires("teleport_admin", s -> s.hasPermission(2)))
+                .requires(PermissionGate.requires("teleport_admin", "vsu.admin.teleport", 2))
                 .then(Commands.argument("x", DoubleArgumentType.doubleArg())
                         .then(Commands.argument("y", DoubleArgumentType.doubleArg())
                                 .then(Commands.argument("z", DoubleArgumentType.doubleArg())
@@ -86,7 +86,7 @@ public final class UtilityCommands {
 
         // /setspawn
         d.register(Commands.literal("setspawn")
-                .requires(FeatureGate.requires("spawn", s -> s.hasPermission(2)))
+                .requires(PermissionGate.requires("spawn", "vsu.admin.setspawn", 2))
                 .executes(UtilityCommands::setSpawn));
     }
 
@@ -165,42 +165,42 @@ public final class UtilityCommands {
 
     private static void registerPlayerUtilityCommands(CommandDispatcher<CommandSourceStack> d) {
         d.register(Commands.literal("nick")
-                .requires(FeatureGate.requires("utility"))
+                .requires(PermissionGate.requires("utility", "vsu.command.nick", 0))
                 .then(Commands.argument("name", StringArgumentType.greedyString())
                         .executes(ctx -> setNickname(ctx, StringArgumentType.getString(ctx, "name"))))
                 .executes(UtilityCommands::clearNickname));
 
         d.register(Commands.literal("seen")
-                .requires(FeatureGate.requires("utility"))
+                .requires(PermissionGate.requires("utility", "vsu.command.utility", 0))
                 .then(Commands.argument("player", StringArgumentType.word())
                         .executes(ctx -> showSeen(ctx, StringArgumentType.getString(ctx, "player")))));
 
         d.register(Commands.literal("whois")
-                .requires(FeatureGate.requires("utility", s -> s.hasPermission(2)))
+                .requires(PermissionGate.requires("utility", "vsu.admin.peek", 2))
                 .then(Commands.argument("target", EntityArgument.player())
                         .executes(ctx -> showWhois(ctx, EntityArgument.getPlayer(ctx, "target")))));
 
         d.register(Commands.literal("ping")
-                .requires(FeatureGate.requires("utility"))
+                .requires(PermissionGate.requires("utility", "vsu.command.utility", 0))
                 .executes(UtilityCommands::showPing));
 
         d.register(Commands.literal("near")
-                .requires(FeatureGate.requires("utility"))
+                .requires(PermissionGate.requires("utility", "vsu.command.utility", 0))
                 .executes(ctx -> showNear(ctx, 100))
                 .then(Commands.argument("radius", IntegerArgumentType.integer(1, 500))
                         .executes(ctx -> showNear(ctx, IntegerArgumentType.getInteger(ctx, "radius")))));
 
         d.register(Commands.literal("getpos")
-                .requires(FeatureGate.requires("utility"))
+                .requires(PermissionGate.requires("utility", "vsu.command.utility", 0))
                 .executes(UtilityCommands::getPos));
         d.register(Commands.literal("playtime")
-                .requires(FeatureGate.requires("utility"))
+                .requires(PermissionGate.requires("utility", "vsu.command.utility", 0))
                 .executes(UtilityCommands::showPlaytime));
         d.register(Commands.literal("suicide")
-                .requires(FeatureGate.requires("utility"))
+                .requires(PermissionGate.requires("utility", "vsu.command.utility", 0))
                 .executes(UtilityCommands::suicide));
         d.register(Commands.literal("list")
-                .requires(FeatureGate.requires("utility"))
+                .requires(PermissionGate.requires("utility", "vsu.command.utility", 0))
                 .executes(UtilityCommands::showPlayerList));
     }
 
@@ -339,7 +339,7 @@ public final class UtilityCommands {
 
     private static void registerMessagingCommands(CommandDispatcher<CommandSourceStack> d) {
         d.register(Commands.literal("msg")
-                .requires(FeatureGate.requires("utility"))
+                .requires(PermissionGate.requires("utility", "vsu.command.message", 0))
                 .then(Commands.argument("target", EntityArgument.player())
                         .then(Commands.argument("message", StringArgumentType.greedyString())
                                 .executes(ctx -> sendMessage(ctx,
@@ -347,7 +347,7 @@ public final class UtilityCommands {
                                         StringArgumentType.getString(ctx, "message"))))));
 
         d.register(Commands.literal("tell")
-                .requires(FeatureGate.requires("utility"))
+                .requires(PermissionGate.requires("utility", "vsu.command.message", 0))
                 .then(Commands.argument("target", EntityArgument.player())
                         .then(Commands.argument("message", StringArgumentType.greedyString())
                                 .executes(ctx -> sendMessage(ctx,
@@ -355,17 +355,17 @@ public final class UtilityCommands {
                                         StringArgumentType.getString(ctx, "message"))))));
 
         d.register(Commands.literal("r")
-                .requires(FeatureGate.requires("utility"))
+                .requires(PermissionGate.requires("utility", "vsu.command.message", 0))
                 .then(Commands.argument("message", StringArgumentType.greedyString())
                         .executes(ctx -> replyMessage(ctx, StringArgumentType.getString(ctx, "message")))));
 
         d.register(Commands.literal("reply")
-                .requires(FeatureGate.requires("utility"))
+                .requires(PermissionGate.requires("utility", "vsu.command.message", 0))
                 .then(Commands.argument("message", StringArgumentType.greedyString())
                         .executes(ctx -> replyMessage(ctx, StringArgumentType.getString(ctx, "message")))));
 
         d.register(Commands.literal("ignore")
-                .requires(FeatureGate.requires("utility"))
+                .requires(PermissionGate.requires("utility", "vsu.command.message", 0))
                 .then(Commands.argument("target", EntityArgument.player())
                         .executes(ctx -> toggleIgnore(ctx, EntityArgument.getPlayer(ctx, "target")))));
     }
@@ -424,21 +424,21 @@ public final class UtilityCommands {
 
     private static void registerItemCommands(CommandDispatcher<CommandSourceStack> d) {
         d.register(Commands.literal("hat")
-                .requires(FeatureGate.requires("utility"))
+                .requires(PermissionGate.requires("utility", "vsu.command.utility", 0))
                 .executes(UtilityCommands::wearHat));
 
         d.register(Commands.literal("more")
-                .requires(FeatureGate.requires("utility", s -> s.hasPermission(2)))
+                .requires(PermissionGate.requires("utility", "vsu.command.utility", 2))
                 .executes(UtilityCommands::moreItems));
 
         d.register(Commands.literal("clear")
-                .requires(FeatureGate.requires("utility", s -> s.hasPermission(2)))
+                .requires(PermissionGate.requires("utility", "vsu.command.utility", 2))
                 .executes(ctx -> clearInventory(ctx, null))
                 .then(Commands.argument("target", EntityArgument.player())
                         .executes(ctx -> clearInventory(ctx, EntityArgument.getPlayer(ctx, "target")))));
 
         d.register(Commands.literal("repair")
-                .requires(FeatureGate.requires("utility", s -> s.hasPermission(2)))
+                .requires(PermissionGate.requires("utility", "vsu.command.utility", 2))
                 .executes(UtilityCommands::repairItem));
     }
 
@@ -489,30 +489,30 @@ public final class UtilityCommands {
 
     private static void registerServerCommands(CommandDispatcher<CommandSourceStack> d) {
         d.register(Commands.literal("broadcast")
-                .requires(FeatureGate.requires("utility", s -> s.hasPermission(2)))
+                .requires(PermissionGate.requires("utility", "vsu.admin.broadcast", 2))
                 .then(Commands.argument("message", StringArgumentType.greedyString())
                         .executes(ctx -> broadcast(ctx, StringArgumentType.getString(ctx, "message")))));
 
         d.register(Commands.literal("bc")
-                .requires(FeatureGate.requires("utility", s -> s.hasPermission(2)))
+                .requires(PermissionGate.requires("utility", "vsu.admin.broadcast", 2))
                 .then(Commands.argument("message", StringArgumentType.greedyString())
                         .executes(ctx -> broadcast(ctx, StringArgumentType.getString(ctx, "message")))));
 
         d.register(Commands.literal("gc")
-                .requires(FeatureGate.requires("utility", s -> s.hasPermission(2)))
+                .requires(PermissionGate.requires("utility", "vsu.admin.broadcast", 2))
                 .executes(UtilityCommands::showServerStats));
 
         d.register(Commands.literal("lag")
-                .requires(FeatureGate.requires("utility"))
+                .requires(PermissionGate.requires("utility", "vsu.admin.lag", 2))
                 .executes(UtilityCommands::showLag));
 
         d.register(Commands.literal("invsee")
-                .requires(FeatureGate.requires("utility", s -> s.hasPermission(2)))
+                .requires(PermissionGate.requires("utility", "vsu.admin.peek", 2))
                 .then(Commands.argument("target", EntityArgument.player())
                         .executes(ctx -> openInventory(ctx, EntityArgument.getPlayer(ctx, "target")))));
 
         d.register(Commands.literal("backsee")
-                .requires(FeatureGate.requires("utility", s -> s.hasPermission(2)))
+                .requires(PermissionGate.requires("utility", "vsu.admin.peek", 2))
                 .then(Commands.argument("target", EntityArgument.player())
                         .executes(ctx -> openBackpack(ctx, EntityArgument.getPlayer(ctx, "target"), -1))
                         .then(Commands.argument("slot", com.mojang.brigadier.arguments.IntegerArgumentType.integer(0, 40))
@@ -521,22 +521,22 @@ public final class UtilityCommands {
                                         com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "slot"))))));
 
         d.register(Commands.literal("accsee")
-                .requires(FeatureGate.requires("utility", s -> s.hasPermission(2)))
+                .requires(PermissionGate.requires("utility", "vsu.admin.peek", 2))
                 .then(Commands.argument("target", EntityArgument.player())
                         .executes(ctx -> openAccessory(ctx, EntityArgument.getPlayer(ctx, "target")))));
 
         d.register(Commands.literal("enderchest")
-                .requires(FeatureGate.requires("utility", s -> s.hasPermission(2)))
+                .requires(PermissionGate.requires("utility", "vsu.admin.peek", 2))
                 .executes(ctx -> openEnderChest(ctx, null))
                 .then(Commands.argument("target", EntityArgument.player())
                         .executes(ctx -> openEnderChest(ctx, EntityArgument.getPlayer(ctx, "target")))));
 
         d.register(Commands.literal("workbench")
-                .requires(FeatureGate.requires("utility"))
+                .requires(PermissionGate.requires("utility", "vsu.command.utility", 0))
                 .executes(UtilityCommands::openWorkbench));
 
         d.register(Commands.literal("anvil")
-                .requires(FeatureGate.requires("utility", s -> s.hasPermission(2)))
+                .requires(PermissionGate.requires("utility", "vsu.command.utility", 2))
                 .executes(UtilityCommands::openAnvil));
     }
 
@@ -577,9 +577,9 @@ public final class UtilityCommands {
         // /backsee dispatches through the InventoryProvider SPI (network.vonix.serverutilities.api).
         // Built-in providers (registered at mod init) wrap the historical passes:
         //   - vonix:curios          (priority 100) — Curios slot scan, soft-dep
+        //   - vonix:data_components (priority 150) — vanilla DataComponents.CONTAINER (1.21+)
         //   - vonix:capability      (priority 200) — universal IItemHandler reflection bridge
         //   - vonix:legacy_nbt      (priority 300) — Items / inventory / BlockEntityTag.Items NBT walk
-        // (1.21+ also registers vonix:data_components at priority 150.)
         // Third-party mods can register their own providers via InventoryProviderRegistry.register(...)
         // or META-INF/services/network.vonix.serverutilities.api.InventoryProvider.
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) return 0;
@@ -611,11 +611,10 @@ public final class UtilityCommands {
     /**
      * Open the resolved {@link InventoryView} as a six-row chest GUI on {@code viewer},
      * mirroring writes back to the view via {@link InventoryView#persist()}.
-     * Centralised here so providers don't have to reimplement the SimpleContainer boilerplate.
      */
     private static void openView(ServerPlayer viewer, InventoryView view) {
         final int viewSlots = view.getSlots();
-        final int guiSize = 54; // always six-row chest GUI
+        final int guiSize = 54;
 
         net.minecraft.world.SimpleContainer container = new net.minecraft.world.SimpleContainer(guiSize) {
             @Override

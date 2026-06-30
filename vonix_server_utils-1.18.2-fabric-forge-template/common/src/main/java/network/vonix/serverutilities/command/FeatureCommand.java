@@ -11,6 +11,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TextComponent;
 import network.vonix.serverutilities.VonixServerUtilities;
 import network.vonix.serverutilities.features.FeatureRegistry;
+import network.vonix.serverutilities.features.PermissionGate;
 import network.vonix.serverutilities.features.ServerConfigClient;
 import network.vonix.serverutilities.venary.VenaryClient;
 
@@ -50,7 +51,7 @@ public final class FeatureCommand {
     /** Returns a builder that can be {@code .then()}-attached to /vonixsu. */
     public static LiteralArgumentBuilder<CommandSourceStack> tree() {
         return Commands.literal("feature")
-                .requires(s -> s.hasPermission(3))
+                .requires(PermissionGate.requires("vsu.admin.manage", 3))
                 .then(Commands.literal("list").executes(FeatureCommand::list))
                 .then(Commands.literal("reload").executes(FeatureCommand::reload))
                 .then(Commands.literal("enable")

@@ -222,6 +222,22 @@ final class LuckPermsBridgeImpl {
                 meta.getPrefix(), meta.getSuffix(), meta.getMetaValue("name-color")));
     }
 
+    /**
+     * Synchronous LP permission lookup against the user's cached permission
+     * data. Returns false when the user is not loaded; the caller catches
+     * any thrown {@link LinkageError} / {@link RuntimeException}.
+     */
+    static boolean hasPermission(UUID player, String node) {
+        Optional<LuckPerms> lpOpt = api();
+        if (lpOpt.isEmpty()) return false;
+        User user = lpOpt.get().getUserManager().getUser(player);
+        if (user == null) return false;
+        return user.getCachedData()
+                .getPermissionData(net.luckperms.api.query.QueryOptions.defaultContextualOptions())
+                .checkPermission(node)
+                .asBoolean();
+    }
+
     private static Set<String> lower(Set<String> in) {
         if (in == null) return new LinkedHashSet<>();
         Set<String> out = new LinkedHashSet<>(in.size());

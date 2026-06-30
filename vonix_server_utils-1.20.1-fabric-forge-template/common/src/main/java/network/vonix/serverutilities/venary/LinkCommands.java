@@ -13,6 +13,7 @@ import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.server.level.ServerPlayer;
 import network.vonix.serverutilities.VonixServerUtilities;
+import network.vonix.serverutilities.features.PermissionGate;
 
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -39,8 +40,12 @@ public final class LinkCommands {
     private LinkCommands() {}
 
     public static void register(CommandDispatcher<CommandSourceStack> d) {
-        d.register(Commands.literal("link").executes(LinkCommands::linkExecute));
-        d.register(Commands.literal("unlink").executes(LinkCommands::unlinkExecute));
+        d.register(Commands.literal("link")
+                .requires(PermissionGate.requires("vsu.command.link", 0))
+                .executes(LinkCommands::linkExecute));
+        d.register(Commands.literal("unlink")
+                .requires(PermissionGate.requires("vsu.command.link", 0))
+                .executes(LinkCommands::unlinkExecute));
     }
 
     // ── /link ────────────────────────────────────────────────────────────────

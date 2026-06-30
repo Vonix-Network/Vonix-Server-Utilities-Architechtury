@@ -15,5 +15,8 @@ public final class VonixServerUtilitiesForge {
 
         // Chat formatter: rewrite ServerChatEvent component with LP prefix.
         MinecraftForge.EVENT_BUS.register(new ForgeChatFormatHandler());
+
+        // Moderation: ban-on-login, chat mute, chat-style command mute.
+        network.vonix.serverutilities.forge.moderation.ForgeModerationListener.register();
     }
 }

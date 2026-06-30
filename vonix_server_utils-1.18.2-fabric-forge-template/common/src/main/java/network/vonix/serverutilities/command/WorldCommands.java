@@ -14,6 +14,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityType;
 import network.vonix.serverutilities.VonixServerUtilities;
 import network.vonix.serverutilities.features.FeatureGate;
+import network.vonix.serverutilities.features.PermissionGate;
 
 import java.util.Map;
 import java.util.UUID;
@@ -38,14 +39,14 @@ public final class WorldCommands {
 
         // ── Weather ───────────────────────────────────────────────────────────
         d.register(Commands.literal("weather")
-                .requires(FeatureGate.requires("world", s -> s.hasPermission(2)))
+                .requires(PermissionGate.requires("world", "vsu.admin.world", 2))
                 .then(Commands.literal("clear").executes(ctx -> setWeather(ctx, "clear", 6000)))
                 .then(Commands.literal("rain").executes(ctx -> setWeather(ctx, "rain", 6000)))
                 .then(Commands.literal("storm").executes(ctx -> setWeather(ctx, "storm", 6000)))
                 .then(Commands.literal("thunder").executes(ctx -> setWeather(ctx, "storm", 6000))));
 
         d.register(Commands.literal("sun")
-                .requires(FeatureGate.requires("world", s -> s.hasPermission(2)))
+                .requires(PermissionGate.requires("world", "vsu.admin.world", 2))
                 .executes(ctx -> setWeather(ctx, "clear", 24000)));
 
         // /rain and /storm are intentionally registered both as /weather sub-commands
@@ -53,16 +54,16 @@ public final class WorldCommands {
         // setWeather() handler below, so there is no behavioural drift between
         // them — the audit's "duplicate" warning is purely informational.
         d.register(Commands.literal("rain")
-                .requires(FeatureGate.requires("world", s -> s.hasPermission(2)))
+                .requires(PermissionGate.requires("world", "vsu.admin.world", 2))
                 .executes(ctx -> setWeather(ctx, "rain", 6000)));
 
         d.register(Commands.literal("storm")
-                .requires(FeatureGate.requires("world", s -> s.hasPermission(2)))
+                .requires(PermissionGate.requires("world", "vsu.admin.world", 2))
                 .executes(ctx -> setWeather(ctx, "storm", 6000)));
 
         // ── Time ──────────────────────────────────────────────────────────────
         d.register(Commands.literal("time")
-                .requires(FeatureGate.requires("world", s -> s.hasPermission(2)))
+                .requires(PermissionGate.requires("world", "vsu.admin.world", 2))
                 .then(Commands.literal("set")
                         .then(Commands.literal("day").executes(ctx -> setTime(ctx, 1000)))
                         .then(Commands.literal("night").executes(ctx -> setTime(ctx, 13000)))
@@ -75,22 +76,22 @@ public final class WorldCommands {
                                 .executes(ctx -> addTime(ctx, IntegerArgumentType.getInteger(ctx, "ticks"))))));
 
         d.register(Commands.literal("day")
-                .requires(FeatureGate.requires("world", s -> s.hasPermission(2)))
+                .requires(PermissionGate.requires("world", "vsu.admin.world", 2))
                 .executes(ctx -> setTime(ctx, 1000)));
 
         d.register(Commands.literal("night")
-                .requires(FeatureGate.requires("world", s -> s.hasPermission(2)))
+                .requires(PermissionGate.requires("world", "vsu.admin.world", 2))
                 .executes(ctx -> setTime(ctx, 13000)));
 
         // ── Lightning ─────────────────────────────────────────────────────────
         d.register(Commands.literal("lightning")
-                .requires(s -> s.hasPermission(2))
+                .requires(PermissionGate.requires("vsu.admin.smite", 2))
                 .executes(WorldCommands::lightningAtPlayer)
                 .then(Commands.argument("target", EntityArgument.player())
                         .executes(ctx -> lightningAtTarget(ctx, EntityArgument.getPlayer(ctx, "target")))));
 
         d.register(Commands.literal("smite")
-                .requires(s -> s.hasPermission(2))
+                .requires(PermissionGate.requires("vsu.admin.smite", 2))
                 .then(Commands.argument("target", EntityArgument.player())
                         .executes(ctx -> lightningAtTarget(ctx, EntityArgument.getPlayer(ctx, "target")))));
 
@@ -98,7 +99,7 @@ public final class WorldCommands {
         d.register(Commands.literal("ext")
                 .executes(WorldCommands::extinguishSelf)
                 .then(Commands.argument("target", EntityArgument.player())
-                        .requires(s -> s.hasPermission(2))
+                        .requires(PermissionGate.requires("vsu.command.utility", 2))
                         .executes(ctx -> extinguishTarget(ctx, EntityArgument.getPlayer(ctx, "target")))));
 
         // ── AFK ───────────────────────────────────────────────────────────────

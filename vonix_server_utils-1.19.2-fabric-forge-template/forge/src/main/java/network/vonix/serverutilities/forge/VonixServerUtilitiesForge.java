@@ -4,6 +4,7 @@ import dev.architectury.platform.forge.EventBuses;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import network.vonix.serverutilities.VonixServerUtilities;
+import network.vonix.serverutilities.forge.moderation.ForgeModerationListener;
 
 @Mod(VonixServerUtilities.MOD_ID)
 public final class VonixServerUtilitiesForge {
@@ -11,5 +12,6 @@ public final class VonixServerUtilitiesForge {
         EventBuses.registerModEventBus(VonixServerUtilities.MOD_ID,
                 FMLJavaModLoadingContext.get().getModEventBus());
         VonixServerUtilities.init();
+        ForgeModerationListener.register();
     }
 }
