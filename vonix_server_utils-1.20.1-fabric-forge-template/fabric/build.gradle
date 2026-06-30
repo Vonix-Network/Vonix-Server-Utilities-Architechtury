@@ -40,8 +40,11 @@ dependencies {
     common(project(path: ':common', configuration: 'namedElements')) { transitive = false }
     shadowBundle project(path: ':common', configuration: 'transformProductionFabric')
 
-    // Bundle SQLite (driver registered explicitly via Class.forName, no relocation needed)
-    shadowBundle 'org.xerial:sqlite-jdbc:3.45.1.0'
+    // sqlite-jdbc via Fabric-loom JarInJar (include) — NOT shaded. libsqlitejdbc.{so,dylib,dll}
+    // has FindClass("org/sqlite/core/NativeDB") baked into JNI_OnLoad, so relocation breaks
+    // the native binding. include + compileOnly mirrors the Forge/NeoForge JiJ shape.
+    include 'org.xerial:sqlite-jdbc:3.45.1.0'
+    compileOnly 'org.xerial:sqlite-jdbc:3.45.1.0'
 
     modCompileOnly "dev.emi:trinkets:3.7.1"
 }
@@ -58,13 +61,8 @@ shadowJar {
     configurations = [project.configurations.shadowBundle]
     archiveClassifier = 'dev-shadow'
 
-    // === Relocate bundled libraries to avoid classpath conflicts ===
-    // When other mods (Iris, Carpet, FTB Library variants, some chunk-storage mods)
-    // ship their own copy of sqlite-jdbc, the classloader picks one and you get
-    // NoSuchFieldError / IncompatibleClassChange from cross-version class fields.
-    // Relocating to a vonix-private namespace gives us our own copy that nothing
-    // else can collide with. Native libs inside the jar get the same treatment.
-    relocate 'org.sqlite', 'network.vonix.serverutilities.shadow.sqlite'
+    // === sqlite-jdbc is NOT shaded — ships via Fabric-loom JarInJar (include). ===
+    // Relocation would break JNI; loom dedups by Maven coords.
 
     // Drop signature files + license noise that breaks merged jars
     exclude 'META-INF/*.SF'
@@ -73,6 +71,8 @@ shadowJar {
     exclude 'META-INF/maven/**'
     exclude 'META-INF/versions/**/module-info.class'
     exclude 'module-info.class'
+    // Belt-and-braces: even if a transitive dep slips sqlite into shadowBundle, drop it. JiJ is the only sqlite path.
+    exclude 'org/sqlite/**'
 
     mergeServiceFiles()
 }

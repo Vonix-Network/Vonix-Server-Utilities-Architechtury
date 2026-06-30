@@ -12,7 +12,7 @@ dependencies {
     modImplementation "dev.architectury:architectury:$rootProject.architectury_api_version"
 
     // SQLite for persistent storage (homes, warps, kit cooldowns)
-    implementation 'org.xerial:sqlite-jdbc:3.45.1.0'
+    compileOnly 'org.xerial:sqlite-jdbc:3.45.1.0'
 
     // LuckPerms API (optional runtime dep). compileOnly so the jar never bundles LP
     // and the mod runs fine on servers without it (NoClassDefFoundError is caught

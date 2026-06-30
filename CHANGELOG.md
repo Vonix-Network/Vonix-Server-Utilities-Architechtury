@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.2] - 2026-06-30
+
+### Fixed
+- JPMS module-layer collisions on `org.sqlite.date` / `org.sqlite.jdbc3` /
+  `org.sqlite.jdbc4` with mods like biolith that also depend on sqlite-jdbc.
+  Hardened the v1.5.1 JarInJar approach so sqlite-jdbc only ships via JiJ
+  (Forge/NeoForge) or loom `include` (Fabric) — never via `shadowBundle`.
+- Fabric jar no longer relocates `org.sqlite` (relocation broke JNI binding
+  to `libsqlitejdbc.so`). Fabric now uses loom's `include` configuration,
+  same dedup story as Forge/NeoForge JiJ.
+
+### Changed
+- `common/build.gradle`: `org.xerial:sqlite-jdbc` moved from `implementation`
+  to `compileOnly` across all 4 templates. The `:common` project compiles
+  against sqlite types but does not pipe the artifact through to the
+  per-loader `shadowBundle`.
+- `shadowJar`: belt-and-braces `exclude 'org/sqlite/**'` added to every
+  loader subproject as defence-in-depth.
+
 ## [1.5.1] - 2026-06-29
 
 ### Fixed
