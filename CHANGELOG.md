@@ -5,6 +5,80 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.1] - 2026-06-29
+
+### Fixed
+- **JPMS `ResolutionException` at boot when VSU and VonixGuardian are both installed.**
+  VSU 1.2.0–1.5.0 shaded `org.xerial:sqlite-jdbc:3.45.1.0` directly into the
+  Forge/NeoForge jar at the original `org.sqlite.*` package. VonixGuardian 1.0.1
+  ships sqlite-jdbc as a Forge JarInJar nested artifact. With both mods present,
+  the JVM module layer saw two distinct modules both exporting
+  `org.sqlite.jdbc3` and refused to resolve:
+  ```
+  java.lang.module.ResolutionException: Modules vonix_server_utilities and
+  org.xerial.sqlitejdbc export package org.sqlite.jdbc3 to module create_wizardry
+  ```
+  The server bootstrap aborted silently (no crash report — JVM is killed during
+  `ModuleLayer` construction).
+- Shade+relocate is NOT a viable fix: the bundled `libsqlitejdbc.{so,dylib,dll}`
+  has `FindClass("org/sqlite/core/NativeDB")` baked into `JNI_OnLoad`, so any
+  attempt to relocate `org.sqlite` → `network.vonix.serverutilities.shadow.sqlite`
+  causes `NoClassDefFoundError: org/sqlite/core/NativeDB` on the first DB call
+  (empirically verified on HTTYD 1.18.2 + Sunlit Valley 1.20.1).
+
+### Changed
+- **All four Forge/NeoForge templates now ship `org.xerial:sqlite-jdbc` via
+  Forge JarInJar (nested jar) at version `3.46.1.0`** — matching VonixGuardian
+  1.0.1's pinned coords exactly. Forge's nested-jar resolver dedupes by Maven
+  coordinates, so when VSU and VG are loaded together only one sqlite module
+  enters the layer. This is the same pattern Mekanism, JEI, and LuckPerms use
+  for shared library distribution.
+- Each Forge/NeoForge build now:
+  - Adds a `nestedJar` configuration that resolves `org.xerial:sqlite-jdbc:3.46.1.0`
+    from `mavenCentral()` (non-transitive).
+  - In `remapJar.doLast`, appends `META-INF/jarjar/sqlite-jdbc-3.46.1.0.jar` plus
+    a `META-INF/jarjar/metadata.json` descriptor onto the user-facing jar via
+    raw `ZipOutputStream`. (Architectury+loom does not pipe ForgeGradle's `jarJar`
+    task through to the final remapped jar, so the merge is performed manually —
+    same approach VG uses.)
+  - Removes `shadowBundle 'org.xerial:sqlite-jdbc:...'` from the `dependencies`
+    block — sqlite is no longer fat-jarred at the top level.
+- The 1.19.2 Forge template additionally drops its stale
+  `relocate 'org.sqlite' → '...shadow.sqlite'` rule. With JarInJar there is
+  nothing at the top level of the outer jar to relocate.
+- Fabric subprojects are **unchanged** — Fabric uses a flat classloader, has no
+  module layer, and was never affected by this collision.
+
+### Fabric — unchanged
+- All four Fabric subprojects continue to ship sqlite-jdbc via `shadowBundle`
+  exactly as in 1.5.0. The JarInJar switch only applies to Forge/NeoForge,
+  where JPMS is the underlying mechanism.
+
+### Verification
+For each of the 4 Forge/NeoForge jars built at 1.5.1:
+- `META-INF/jarjar/sqlite-jdbc-3.46.1.0.jar` present, 14,123,618 bytes
+  (byte-identical to the nested jar in VonixGuardian 1.0.1).
+- `META-INF/jarjar/metadata.json` declares `org.xerial:sqlite-jdbc` at
+  `[3.46.1.0,)`, pinned to artifactVersion `3.46.1.0`.
+- Zero `org/sqlite/*` entries at the jar root.
+- Zero `network/vonix/serverutilities/shadow/sqlite/*` entries.
+- `org.slf4j` is still relocated to `network.vonix.serverutilities.shadow.slf4j`
+  (unchanged — pure-Java, no JNI; needed to avoid a separate slf4j JPMS
+  collision with mods like `via_romana` on 1.20.1 and `comforts` on 1.21.1).
+- **Note:** `org.slf4j:slf4j-api:1.7.36` is now declared explicitly in
+  `shadowBundle` on every Forge/NeoForge subproject. Previously slf4j-api
+  arrived transitively via `shadowBundle 'org.xerial:sqlite-jdbc:…'`. After
+  moving sqlite-jdbc out of `shadowBundle` and into the `nestedJar`
+  configuration, slf4j stopped being shaded, leaving `relocate 'org.slf4j' →
+  '…shadow.slf4j'` to rewrite VSU's own `LoggerFactory` references to a class
+  that didn't exist in the final jar (`NoClassDefFoundError:
+  network/vonix/serverutilities/shadow/slf4j/LoggerFactory` during mod-init).
+  Verified boot-clean on a prod-parity Connector+Forge 1.20.1 staging server
+  with VonixGuardian 1.0.1 + VSU 1.5.1: `Done (3.347s)!`, `VonixGuardian
+  online.`, 69 KiB `vonixguardian.db` written through the JarInJar sqlite
+  native (so JNI works and Forge's nested-jar resolver successfully dedup'd
+  both mods' sqlite-jdbc-3.46.1.0 down to a single `org.sqlite` module).
+
 ## [1.5.0] - 2026-06-27
 
 `InventoryProvider` SPI under `network.vonix.serverutilities.api` —

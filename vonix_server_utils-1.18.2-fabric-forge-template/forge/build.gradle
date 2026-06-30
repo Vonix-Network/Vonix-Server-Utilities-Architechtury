@@ -28,9 +28,17 @@ configurations {
         canBeResolved = true
         canBeConsumed = false
     }
+
+    // Resolves the sqlite-jdbc artifact we ship via Forge JarInJar (nested jar).
+    nestedJar {
+        canBeResolved = true
+        canBeConsumed = false
+        transitive = false
+    }
 }
 
 repositories {
+    mavenCentral()
     maven { url "https://maven.theillusivec4.top/" }
 }
 
@@ -44,7 +52,17 @@ dependencies {
 
     common(project(path: ':common', configuration: 'namedElements')) { transitive = false }
     shadowBundle project(path: ':common', configuration: 'transformProductionForge')
-    shadowBundle 'org.xerial:sqlite-jdbc:3.45.1.0'
+    // slf4j-api: previously came in transitively via sqlite-jdbc shadowBundle.
+    // After moving sqlite-jdbc to nestedJar, slf4j-api must be pulled in explicitly.
+    shadowBundle 'org.slf4j:slf4j-api:1.7.36'
+
+    // sqlite-jdbc via Forge JarInJar — see remapJar doLast. NOT shaded because the
+    // native libsqlitejdbc.so has JNI symbols hardwired to org.sqlite.core.NativeDB
+    // (relocation breaks them). Shipping unrelocated at org.sqlite collides with
+    // VonixGuardian 1.0.1 in JPMS — JarInJar at the same Maven coords (3.46.1.0)
+    // lets Forge's nested-jar resolver dedup so only one sqlite module loads.
+    compileOnly 'org.xerial:sqlite-jdbc:3.46.1.0'
+    nestedJar   'org.xerial:sqlite-jdbc:3.46.1.0'
 }
 
 processResources {
@@ -59,21 +77,10 @@ shadowJar {
     configurations = [project.configurations.shadowBundle]
     archiveClassifier = 'dev-shadow'
 
-    // === Relocate bundled libraries to avoid classpath conflicts ===
-    // NOTE: sqlite-jdbc must NOT be relocated. Its native library (libsqlitejdbc.so)
-    // exports JNI symbols hardwired to the original `org.sqlite.core.NativeDB` class
-    // name. Shadow rewrites the Java class names but cannot rename the JNI symbols
-    // baked into the compiled .so, so a relocated NativeDB fails to bind at runtime:
-    //   java.lang.NoClassDefFoundError: org/sqlite/core/NativeDB
-    // (observed on the HTTYD 1.18.2 boot test during VSU Database.init). Forge already
-    // isolates each mod in its own module classloader, so leaving sqlite-jdbc under its
-    // real `org.sqlite` name does not collide with other mods that bundle it.
-    // Therefore: do NOT add `relocate 'org.sqlite', ...` here.
-    //
-    // SLF4J is bundled by the shadowBundle config; exporting org.slf4j(.event)
-    // collides with other modpack mods that bundle their own SLF4J and breaks
-    // the JVM module layer (ResolutionException ... exports org.slf4j.event).
-    // Relocate it into our private namespace like sqlite-jdbc.
+    // sqlite-jdbc is NOT shaded — ships via Forge JarInJar (see remapJar doLast).
+    // slf4j is bundled by shadowBundle (transitively via :common); exporting
+    // org.slf4j(.event) collides with other modpack mods → JPMS
+    // ResolutionException. Relocate it into our private namespace.
     relocate 'org.slf4j', 'network.vonix.serverutilities.shadow.slf4j'
 
     // Drop signature files + license noise that breaks merged jars
@@ -89,6 +96,60 @@ shadowJar {
 
 remapJar {
     inputFile.set shadowJar.archiveFile
+}
+
+// =============================================================================
+// Forge JarInJar (nested jar) — sqlite-jdbc
+// =============================================================================
+// Architectury+loom doesn't pipe ForgeGradle's jarJar task through to the final
+// remapped jar. Append the nested jar + metadata.json directly to the user-facing
+// remapJar output. Pattern matches VonixGuardian 1.0.1; Forge's nested-jar
+// resolver dedups against any other mod shipping the same Maven coords.
+import java.util.zip.ZipFile
+import java.util.zip.ZipOutputStream
+import java.util.zip.ZipEntry
+
+tasks.named('remapJar') {
+    inputs.files configurations.nestedJar
+    doLast {
+        File outJar = archiveFile.get().asFile
+        File nested = configurations.nestedJar.singleFile
+        String entryName = "META-INF/jarjar/${nested.name}"
+        String metadata = """{
+  "jars": [
+    {
+      "identifier": { "group": "org.xerial", "artifact": "sqlite-jdbc" },
+      "version": { "range": "[3.46.1.0,)", "artifactVersion": "3.46.1.0" },
+      "path": "${entryName}",
+      "isObfuscated": false
+    }
+  ]
+}
+"""
+        File tmp = new File(outJar.parentFile, outJar.name + '.tmp')
+        new ZipOutputStream(tmp.newOutputStream()).withCloseable { out ->
+            new ZipFile(outJar).withCloseable { zf ->
+                zf.entries().each { entry ->
+                    if (entry.name.startsWith('META-INF/jarjar/')) return
+                    out.putNextEntry(new ZipEntry(entry.name))
+                    if (!entry.directory) zf.getInputStream(entry).withCloseable { it.transferTo(out) }
+                    out.closeEntry()
+                }
+            }
+            out.putNextEntry(new ZipEntry(entryName))
+            nested.withInputStream { it.transferTo(out) }
+            out.closeEntry()
+            out.putNextEntry(new ZipEntry('META-INF/jarjar/metadata.json'))
+            out.write(metadata.getBytes('UTF-8'))
+            out.closeEntry()
+        }
+        java.nio.file.Files.move(
+            tmp.toPath(), outJar.toPath(),
+            java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+            java.nio.file.StandardCopyOption.ATOMIC_MOVE
+        )
+        logger.lifecycle "Embedded JarInJar nested ${nested.name} into ${outJar.name}"
+    }
 }
 
 

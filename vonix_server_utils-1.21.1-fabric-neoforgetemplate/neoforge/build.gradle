@@ -22,9 +22,17 @@ configurations {
         canBeResolved = true
         canBeConsumed = false
     }
+
+    // Resolves sqlite-jdbc artifact we ship via NeoForge JarInJar (nested jar).
+    nestedJar {
+        canBeResolved = true
+        canBeConsumed = false
+        transitive = false
+    }
 }
 
 repositories {
+    mavenCentral()
     maven {
         name = 'NeoForged'
         url = 'https://maven.neoforged.net/releases'
@@ -40,9 +48,17 @@ dependencies {
 
     common(project(path: ':common', configuration: 'namedElements')) { transitive = false }
     shadowBundle project(path: ':common', configuration: 'transformProductionNeoForge')
+    // slf4j-api: previously came in transitively via sqlite-jdbc shadowBundle.
+    // After moving sqlite-jdbc to nestedJar, slf4j-api must be pulled in explicitly.
+    shadowBundle 'org.slf4j:slf4j-api:1.7.36'
 
-    // Bundle SQLite (no relocation needed — native lib loads by class name)
-    shadowBundle 'org.xerial:sqlite-jdbc:3.45.1.0'
+    // sqlite-jdbc via NeoForge JarInJar — see remapJar doLast. NOT shaded because
+    // JNI symbols in libsqlitejdbc.so are baked to org.sqlite.core.NativeDB and
+    // relocation breaks them. JarInJar at the same Maven coords (3.46.1.0) as
+    // VonixGuardian 1.0.1 lets NeoForge's nested-jar resolver dedup so only one
+    // sqlite module loads into the layer (avoids JPMS ResolutionException).
+    compileOnly 'org.xerial:sqlite-jdbc:3.46.1.0'
+    nestedJar   'org.xerial:sqlite-jdbc:3.46.1.0'
 
     compileOnly "top.theillusivec4.curios:curios-neoforge:9.5.1+1.21.1:api"
 }
@@ -59,24 +75,10 @@ shadowJar {
     configurations = [project.configurations.shadowBundle]
     archiveClassifier = 'dev-shadow'
 
-    // === Relocate bundled libraries to avoid classpath conflicts ===
-    // NOTE: sqlite-jdbc must NOT be relocated. Its native library
-    // (libsqlitejdbc.so) exports JNI symbols hardwired to the original
-    // `org.sqlite.core.NativeDB` class name. Shadow rewrites the Java class
-    // names but cannot rename the JNI symbols baked into the compiled .so,
-    // so a relocated NativeDB fails to bind at runtime:
-    //   java.lang.NoClassDefFoundError: org/sqlite/core/NativeDB
-    // (matches the comment in the 1.20.1 Forge build.gradle and was
-    //  confirmed on Protocol Zero 2026-06-24 prod boot test).
-    // Forge/NeoForge isolates each mod in its own module classloader, so
-    // leaving sqlite-jdbc under its real `org.sqlite` name does not collide
-    // with other mods that bundle it.
-    //
-    // slf4j IS relocated — pure-Java, no JNI, and other mods (comforts on
-    // 1.21.1 NeoForge) trigger a JPMS `exports org.slf4j.event` collision
-    // otherwise:
-    //   java.lang.module.ResolutionException: Modules vonix_server_utilities
-    //   and org.slf4j export package org.slf4j.event to module comforts
+    // sqlite-jdbc is NOT shaded — ships via NeoForge JarInJar (see remapJar doLast).
+    // slf4j IS relocated — pure-Java, no JNI. Other modpack mods (comforts on
+    // 1.21.1 NeoForge) bundle slf4j and trigger JPMS ResolutionException
+    // (Modules vonix_server_utilities and org.slf4j export package org.slf4j.event).
     relocate 'org.slf4j', 'network.vonix.serverutilities.shadow.slf4j'
 
     // Drop signature files + license noise that breaks merged jars
@@ -92,5 +94,58 @@ shadowJar {
 
 remapJar {
     inputFile.set shadowJar.archiveFile
+}
+
+// =============================================================================
+// NeoForge JarInJar (nested jar) — sqlite-jdbc
+// =============================================================================
+// Architectury+loom doesn't pipe NeoForge's jarJar through to the final
+// remapped jar. Append nested jar + metadata.json directly to remapJar output.
+// Matches VonixGuardian 1.0.1's pattern.
+import java.util.zip.ZipFile
+import java.util.zip.ZipOutputStream
+import java.util.zip.ZipEntry
+
+tasks.named('remapJar') {
+    inputs.files configurations.nestedJar
+    doLast {
+        File outJar = archiveFile.get().asFile
+        File nested = configurations.nestedJar.singleFile
+        String entryName = "META-INF/jarjar/${nested.name}"
+        String metadata = """{
+  "jars": [
+    {
+      "identifier": { "group": "org.xerial", "artifact": "sqlite-jdbc" },
+      "version": { "range": "[3.46.1.0,)", "artifactVersion": "3.46.1.0" },
+      "path": "${entryName}",
+      "isObfuscated": false
+    }
+  ]
+}
+"""
+        File tmp = new File(outJar.parentFile, outJar.name + '.tmp')
+        new ZipOutputStream(tmp.newOutputStream()).withCloseable { out ->
+            new ZipFile(outJar).withCloseable { zf ->
+                zf.entries().each { entry ->
+                    if (entry.name.startsWith('META-INF/jarjar/')) return
+                    out.putNextEntry(new ZipEntry(entry.name))
+                    if (!entry.directory) zf.getInputStream(entry).withCloseable { it.transferTo(out) }
+                    out.closeEntry()
+                }
+            }
+            out.putNextEntry(new ZipEntry(entryName))
+            nested.withInputStream { it.transferTo(out) }
+            out.closeEntry()
+            out.putNextEntry(new ZipEntry('META-INF/jarjar/metadata.json'))
+            out.write(metadata.getBytes('UTF-8'))
+            out.closeEntry()
+        }
+        java.nio.file.Files.move(
+            tmp.toPath(), outJar.toPath(),
+            java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+            java.nio.file.StandardCopyOption.ATOMIC_MOVE
+        )
+        logger.lifecycle "Embedded JarInJar nested ${nested.name} into ${outJar.name}"
+    }
 }
 
