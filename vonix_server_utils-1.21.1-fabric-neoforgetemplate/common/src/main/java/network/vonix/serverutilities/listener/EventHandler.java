@@ -16,6 +16,7 @@ import network.vonix.serverutilities.donation_ranks.RankGroupSyncer;
 import network.vonix.serverutilities.donation_ranks.RankSyncTask;
 import network.vonix.serverutilities.features.FeatureRegistry;
 import network.vonix.serverutilities.features.ServerConfigClient;
+import network.vonix.serverutilities.moderation.ModerationBootstrap;
 import network.vonix.serverutilities.teleport.TeleportManager;
 import network.vonix.serverutilities.venary.LinkCommands;
 import network.vonix.serverutilities.venary.PlayerSyncTask;
@@ -28,6 +29,9 @@ import network.vonix.serverutilities.venary.VenaryClient;
 public final class EventHandler {
 
     public static void init() {
+
+        // ── Moderation subsystem ──────────────────────────────────────────────
+        ModerationBootstrap.init();
 
         // ── Commands ──────────────────────────────────────────────────────────
         CommandRegistrationEvent.EVENT.register((dispatcher, registry, selection) -> {
