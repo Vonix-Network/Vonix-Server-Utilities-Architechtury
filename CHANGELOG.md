@@ -5,6 +5,92 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-06-30
+
+### Added
+- **Moderation subsystem** — 11 new commands shipped across all 4 templates:
+  `/tempban`, `/ban`, `/unban`, `/banlist`, `/tempmute`, `/mute`, `/unmute`,
+  `/kick`, `/warn`, `/warnings`, `/clearwarnings`. SQLite-backed via the
+  new `punishments` table (lazy schema bootstrap on first call), with an
+  in-memory `MuteState` cache and a 60-second `ExpirySweeper` that promotes
+  expired rows from `active=1` to `active=0` automatically. Tellraw +
+  delayed disconnect for online tempbans so the player reads the reason
+  before the kick lands. Tab-complete suggests `1h / 6h / 1d / 7d / 30d /
+  perm` for `<duration>`; online players ∪ historical names from
+  `punishments.target_name` for `<player>`.
+- **`DurationParser`** — accepts `30s`, `5m`, `2h`, `7d`, `4w`, `1mo`, `1y`,
+  `perm/permanent/never`. Composes (`1d12h`, `7d6h30m`). Rejects negative,
+  unitless, or `> 100y`.
+- **`PermissionGate`** — composes `FeatureGate` + LuckPerms node check +
+  vanilla op-level fallback. Console source always passes. The single
+  helper every command uses for `.requires(...)`.
+- **`LuckPermsBridge.hasPermission(UUID, String)`** — synchronous LP node
+  check via `User.getCachedData().getPermissionData(...).checkPermission`.
+  Returns `false` on any LP failure (fail-closed; callers check
+  `isPresent()` first).
+- **LP bypass nodes** — `vsu.bypass.mute` exempts a player from chat-mute
+  enforcement (checked at `MuteState.isMuted` read-time, so revoking the
+  node re-enforces an existing mute without an admin action).
+  `vsu.bypass.ban` skips login-ban enforcement (logs a `bypassed` entry;
+  active row stays in the DB).
+- **Per-loader enforcement listeners** — NeoForge / Forge: `PlayerEvent.
+  PlayerLoggedInEvent` (login-ban), `ServerChatEvent` (chat-mute),
+  `CommandEvent` (chat-style command intercept for `/me /msg /tell /w /r
+  /reply /broadcast /bc /gc`). Fabric: `ServerPlayConnectionEvents.JOIN`
+  + `ServerMessageEvents.ALLOW_CHAT_MESSAGE` + `ALLOW_COMMAND_MESSAGE`
+  on 1.19.2+. **1.18.2 Fabric** uses a Mixin into
+  `ServerGamePacketListenerImpl.handleChat` because
+  `fabric-message-api-v1` isn't present in fabric-api `0.77.0+1.18.2`.
+- **Permission node taxonomy** — `vsu.command.X` (basic player commands),
+  `vsu.admin.X` (op-grade), `vsu.mod.X` (moderation), `vsu.bypass.X`
+  (escape hatches). See `docs/PERMISSIONS.md` for the canonical table.
+- **Documentation** — `docs/V1.6.0-SPEC.md` (authoritative implementation
+  contract), `docs/COMMANDS.md` (alphabetical command reference),
+  `docs/PERMISSIONS.md` (node tree + LuckPerms recipe groups),
+  `docs/MODERATION.md` (operator workflow, duration syntax, audit
+  queries, escalation policy template), `docs/GAP-ANALYSIS-v1.6.0.md`
+  (research deliverable comparing VSU's command surface to FTB
+  Essentials / EssentialsX / Essential Commands — P0 shortlist for
+  v1.6.1: `/rtp`, `/mail`, `/afk`, `/disposal`, `/rules`).
+
+### Changed
+- **Every existing command refit to real permission nodes.** Bare
+  `s -> s.hasPermission(N)` predicates replaced with
+  `PermissionGate.requires(featureKey, "vsu.X.Y", N)`. LP-managed servers
+  now get proper node-based access control; servers without LP fall back
+  to the original vanilla op-level behaviour automatically.
+- **`/setwarp` / `/delwarp`** — moved to `vsu.admin.warp` (op level 3).
+  Previously op-only via inline `hasPermission(3)`.
+- **`/link` / `/unlink`** — now gated on `vsu.command.link` (op 0 / LP
+  defaulted everyone). Previously ungated.
+- **README rewritten** to represent the whole project — feature
+  highlights, per-MC-version support matrix, install + quick-start +
+  docs index, building + versioning + license. 7.4 KB.
+
+### Notes
+- API drift across the four templates is hidden behind the
+  `PermissionGate` boundary. 1.18.2 uses `getEntity() instanceof
+  ServerPlayer` because `CommandSourceStack.isPlayer()` / `.getPlayer()`
+  don't exist; the API contract is identical regardless.
+- The new `punishments` SQLite table is created lazily on the first
+  moderation command — no migration step required.
+- LuckPerms remains optional (soft-dep). When absent, every `.requires`
+  falls back to the listed op level; `vsu.bypass.*` nodes are inert.
+
+### Compile matrix
+| MC | Loader | JDK |
+|---|---|---|
+| 1.18.2 | Forge 40.x | 17 |
+| 1.18.2 | Fabric | 17 |
+| 1.19.2 | Forge 43.x | 17 |
+| 1.19.2 | Fabric | 17 |
+| 1.20.1 | Forge 47.x | 17 |
+| 1.20.1 | Fabric | 17 |
+| 1.21.1 | NeoForge 21.x | 21 |
+| 1.21.1 | Fabric | 21 |
+
+All 8 build targets: `BUILD SUCCESSFUL`.
+
 ## [1.5.2] - 2026-06-30
 
 ### Fixed
