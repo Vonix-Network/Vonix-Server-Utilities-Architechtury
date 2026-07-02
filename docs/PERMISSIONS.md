@@ -1,6 +1,6 @@
 # VSU Permissions Reference
 
-Canonical permission node tree for Vonix Server Utilities v1.6.0. Every command in [COMMANDS.md](COMMANDS.md) is gated by exactly one node from this document.
+Canonical permission node tree for Vonix Server Utilities v1.6.1. Every command in [COMMANDS.md](COMMANDS.md) is gated by exactly one node from this document.
 
 ## Table of contents
 
@@ -29,7 +29,9 @@ vsu.<category>.<command>[.<scope>]
 | `vsu.mod.*` | Moderation actions (ban, mute, kick, warn). |
 | `vsu.bypass.*` | Exemptions from a restriction (cooldown, mute enforcement, ban enforcement). |
 
-`PermissionGate.check(source, node, opFallback)` runs the check. When LuckPerms is present, the node is authoritative. When LuckPerms is absent the vanilla op-level fallback is used. Console always passes regardless.
+`PermissionGate.check(source, node, opFallback)` runs the check. **LP grant and op-fallback form a UNION** (v1.6.1+): the source passes if it holds `node` in LuckPerms **OR** meets the vanilla `opFallback` op-level. Console always passes regardless. This means an unconfigured LP install still lets ops use `vsu.admin.*`/`vsu.mod.*` commands, and every player still gets the `opFallback=0` commands out of the box — while explicit LP grants continue to open commands to non-op players.
+
+> **v1.6.0 pitfall.** v1.6.0 shipped LP as authoritative (LP grant, no op fallback). If LP was installed without also running the `default-player` recipe below, every non-console source was denied every command. v1.6.1 restores the union semantics — upgrade if you're on 1.6.0.
 
 ## Full node table
 
@@ -258,8 +260,19 @@ lp user Steve parent set owner
 ## Pitfalls
 
 - **Bypass nodes are sticky.** `vsu.bypass.ban` makes the holder permanently un-bannable while the node is set. Grant it to a per-incident temporary group, then remove (see [MODERATION.md § LP integration](MODERATION.md#luckperms-integration)).
-- **LuckPerms default-deny vs vanilla default-permit.** Vanilla op-level fallback grants a command if the player meets the level — there is no "deny" state, only "high enough" or "not". LuckPerms is the opposite: an unset node is *not* a yes. If you install LuckPerms but never set `vsu.command.home`, players will not be able to `/home` even if they were op-2 before. Set up the `default-player` recipe before flipping LP on.
-- **PermissionGate fallback when LP is absent.** `PermissionGate.check()` first probes `LuckPermsBridge.isPresent()`. If false, it falls back to `source.hasPermission(opFallback)` — i.e. the vanilla op level shown in the [full node table](#full-node-table). This means a brand-new server with no LP install behaves like vanilla op semantics out of the box; installing LP is a deliberate cutover.
+- **v1.6.0 lockout bug (fixed in v1.6.1).** v1.6.0 shipped LP as authoritative — when LP was present, op-level was never consulted, so unset nodes read as "deny" for every non-console source. The result: installing LP without running the `default-player` recipe locked every player out of every command. Upgrade to v1.6.1 or later. If you're stuck on 1.6.0, either run the recipes below or hotpatch with the wildcard grants documented in the next bullet.
+- **Wildcard hotpatch for unconfigured LP installs.** LuckPerms treats `foo.bar.*` as a proper wildcard node during resolution — the exact node the mod queries reads as `true` when a wildcard parent is granted. Three lines cover the whole tree without touching per-command config:
+  ```
+  lp group default permission set vsu.command.* true
+  lp group admin   permission set vsu.admin.*   true
+  lp group admin   permission set vsu.mod.*     true
+  ```
+  Adjust `admin` to your staff group. Do NOT wildcard `vsu.bypass.*` on any group — bypass nodes are opt-in exemptions and should stay per-user.
+- **PermissionGate is a UNION, not a fallback chain (v1.6.1+).** `PermissionGate.check()` returns true if the source holds `node` in LuckPerms OR meets the `opFallback` op-level — either alone is sufficient. This means:
+  - Op-2 staff keep working the moment they OP, even with LP installed and no VSU nodes granted.
+  - Non-op players still get every `opFallback=0` command by default.
+  - Explicit LP grants extend commands to non-op players (the whole point of installing LP).
+  - The only way to REVOKE an op's access to a command is to de-op them (or use LP's explicit-deny nodes on top).
 - **`vsu.command.utility` is intentionally broad.** It gates a dozen low-risk player commands (`/hat`, `/repair`, `/seen`, `/playtime`, `/list`, etc.). Split it into per-command nodes by adding `vsu.command.utility.*` overrides in your own group config if you need finer control — `PermissionGate` will accept LuckPerms wildcard inheritance.
 - **Console always passes.** Scripts and `function`/command-block calls bypass `PermissionGate` entirely. Don't rely on permission nodes for security against command blocks.
 
