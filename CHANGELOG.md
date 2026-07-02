@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.1] - 2026-07-02
+
+### Fixed
+- **Critical: v1.6.0 permission lockout.** `PermissionGate.check()` in
+  v1.6.0 treated LuckPerms as *authoritative* — when LP was present the
+  vanilla op-level fallback was never consulted, so any node that wasn't
+  explicitly granted read as "deny" for every non-console source.
+  Result: every server that installed LP without also running the
+  `default-player` recipe from `docs/PERMISSIONS.md` locked all players
+  (including ops) out of every VSU command after upgrading. v1.6.1
+  changes the composition so **LP grant and op-fallback form a UNION**
+  — the source passes if it holds the LP node OR meets the vanilla op
+  level, either alone is sufficient. Ops keep working the moment they
+  OP, non-op players still get every `opFallback=0` command by default,
+  and explicit LP grants continue to extend commands to non-op players.
+  Applies to all four templates (1.18.2, 1.19.2, 1.20.1, 1.21.1).
+
+### Docs
+- **`docs/PERMISSIONS.md`** — documented the v1.6.0 lockout, the new
+  UNION semantics, and a three-line wildcard hotpatch
+  (`lp group default permission set vsu.command.* true` +
+  `vsu.admin.*` / `vsu.mod.*` on staff) for operators stuck on 1.6.0
+  who need to unblock their server before rolling the 1.6.1 jar.
+
 ## [1.6.0] - 2026-06-30
 
 ### Added
