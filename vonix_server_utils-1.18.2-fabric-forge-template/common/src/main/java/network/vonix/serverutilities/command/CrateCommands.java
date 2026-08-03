@@ -27,8 +27,6 @@ public final class CrateCommands {
     private static final String ADMIN_NODE = "vsu.admin.crate";
     private static final int ADMIN_OP_LEVEL = 2;
 
-    private static final String VERSION = "1.7.0";
-
     private CrateCommands() {}
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
