@@ -9,6 +9,8 @@ import net.minecraft.server.level.ServerPlayer;
 import network.vonix.serverutilities.VonixServerUtilities;
 import network.vonix.serverutilities.admin.AdminManager;
 import network.vonix.serverutilities.command.ModCommands;
+import network.vonix.serverutilities.command.CrateCommands;
+import network.vonix.serverutilities.crates.CratePlaytimeTask;
 import network.vonix.serverutilities.command.UtilityCommands;
 import network.vonix.serverutilities.command.WorldCommands;
 import network.vonix.serverutilities.config.ModConfig;
@@ -36,6 +38,7 @@ public final class EventHandler {
         // ── Commands ──────────────────────────────────────────────────────────
         CommandRegistrationEvent.EVENT.register((dispatcher, selection) -> {
             ModCommands.register(dispatcher);
+            CrateCommands.register(dispatcher);
             UtilityCommands.register(dispatcher);
             WorldCommands.register(dispatcher);
             LinkCommands.register(dispatcher);
@@ -47,7 +50,19 @@ public final class EventHandler {
             ModConfig.INSTANCE.load(server.getServerDirectory().toPath().resolve("config"));
             // Pass server so the DB can locate the VonixCore DB for migration
             VonixServerUtilities.getInstance().getDatabase().init(server);
-            // Rehydrate persisted caches on the DB executor so we don't block the main thread.
+            // Virtual key and crate schema. Creation is idempotent and stays on the DB thread.
+            VonixServerUtilities.dbAsync(() -> {
+                try {
+                    var manager = network.vonix.serverutilities.crates.CrateRepository.getInstance();
+                    manager.ensureSchema(VonixServerUtilities.getInstance().getDatabase().getConnection());
+                    manager.createCrate("playtime", "playtime");
+                    manager.createCrate("event", "event");
+                    int recovered = manager.recoverPendingClaims();
+                    if (recovered > 0) VonixServerUtilities.LOGGER.warn("[VonixSU] Refunded {} pending crate claims after startup.", recovered);
+                } catch (Exception e) {
+                    VonixServerUtilities.LOGGER.error("[VonixSU] Crate/key schema initialisation failed", e);
+                }
+            });
             VonixServerUtilities.dbAsync(() -> {
                 TeleportManager.getInstance().hydrateFromDb();
                 UtilityCommands.hydrateFromDb();
@@ -62,6 +77,7 @@ public final class EventHandler {
             PlayerSyncTask.register();
             // Feature-flag registry: first call runs the first-run heuristic
             // against the (now-open) SQLite DB, then the poller takes over.
+            CratePlaytimeTask.register();
             FeatureRegistry.getInstance();
             ServerConfigClient.startPolling();
         });
@@ -84,6 +100,7 @@ public final class EventHandler {
             LinkCommands.clearCooldowns();
             VenaryClient venary = VenaryClient.get();
             if (venary != null) venary.shutdown();
+            CratePlaytimeTask.clear();
             // Shutdown executor first so queued DB writes finish before connection closes
             VonixServerUtilities.getInstance().shutdown();
             VonixServerUtilities.getInstance().getDatabase().close();

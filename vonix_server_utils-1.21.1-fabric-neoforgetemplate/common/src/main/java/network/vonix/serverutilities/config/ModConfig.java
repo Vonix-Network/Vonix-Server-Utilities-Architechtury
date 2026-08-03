@@ -17,6 +17,7 @@ public final class ModConfig {
     private int maxHomes = 5;
     private int tpaTimeoutSeconds = 120;
     private int deathBackDelaySeconds = 0;
+    private int playtimeKeyIntervalMinutes = 60;
 
     // ── Venary site-link integration ─────────────────────────────────────────
     // All defaults keep the network layer OFF. Operator must opt in explicitly.
@@ -64,6 +65,7 @@ public final class ModConfig {
         maxHomes              = intOf(p, "max_homes", 5);
         tpaTimeoutSeconds     = intOf(p, "tpa_timeout_seconds", 120);
         deathBackDelaySeconds = intOf(p, "death_back_delay_seconds", 0);
+        playtimeKeyIntervalMinutes = Math.max(1, intOf(p, "playtime_key_interval_minutes", 60));
 
         venaryEnabled              = boolOf(p, "venary_enabled", false);
         venaryApiBase              = strOf(p,  "venary_api_base", VenaryConfig.DEFAULT_API_BASE);
@@ -91,6 +93,9 @@ public final class ModConfig {
                         tpa_timeout_seconds=120
                         # Seconds after death before /backdeath is usable (0 = instant)
                         death_back_delay_seconds=0
+
+                        # Minutes of playtime required for each automatic Playtime Key.
+                        playtime_key_interval_minutes=60
 
                         # ─── Venary site-link integration ───────────────────────────────────
                         # Master kill switch. When false the mod NEVER contacts the Venary API.
@@ -137,6 +142,7 @@ public final class ModConfig {
     public int getMaxHomes()              { return maxHomes; }
     public long getTpaTimeoutMs()         { return tpaTimeoutSeconds * 1000L; }
     public int getDeathBackDelaySeconds() { return deathBackDelaySeconds; }
+    public int getPlaytimeKeyIntervalMinutes() { return playtimeKeyIntervalMinutes; }
 
     /** Builds an immutable snapshot of the current Venary settings. */
     public VenaryConfig getVenaryConfig() {

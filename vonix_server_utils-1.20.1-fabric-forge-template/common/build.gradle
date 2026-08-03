@@ -19,3 +19,12 @@ dependencies {
     // by LuckPermsBridge.get()).
     compileOnly 'net.luckperms:api:5.4'
 }
+
+
+tasks.register('crateRulesTest', JavaExec) {
+    group = 'verification'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'network.vonix.serverutilities.crates.CrateRulesTest'
+}
+
+tasks.named('check') { dependsOn tasks.named('crateRulesTest') }

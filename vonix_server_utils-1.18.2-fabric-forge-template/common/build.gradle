@@ -16,3 +16,14 @@ dependencies {
     compileOnly 'net.luckperms:api:5.4'
 }
 
+tasks.register('crateRulesTest', JavaExec) {
+    group = 'verification'
+    description = 'Runs pure crate/key validation and weighted-percentage regression checks.'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'network.vonix.serverutilities.crates.CrateRulesTest'
+}
+
+tasks.named('check') {
+    dependsOn tasks.named('crateRulesTest')
+}
+
