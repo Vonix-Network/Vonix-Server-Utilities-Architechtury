@@ -4,6 +4,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
+import net.minecraft.commands.CommandResultCallback;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
@@ -14,6 +15,7 @@ import network.vonix.serverutilities.VonixServerUtilities;
 import network.vonix.serverutilities.crates.CrateRepository;
 import network.vonix.serverutilities.features.PermissionGate;
 
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 /**
@@ -182,17 +184,34 @@ public final class CrateCommands {
             }
             String command = result.command().replace("{player}", player.getGameProfile().getName());
             server.execute(() -> {
+                // 1.21.1: performPrefixedCommand returns void; result arrives via CommandResultCallback.
+                AtomicBoolean commandReported = new AtomicBoolean();
+                CommandResultCallback resultCallback = (success, ignoredResult) -> {
+                    if (!commandReported.compareAndSet(false, true)) {
+                        return;
+                    }
+                    VonixServerUtilities.dbAsync(() -> {
+                        if (success) {
+                            completeClaim(server, context, player, result);
+                        } else {
+                            refundClaim(server, context, player, result);
+                        }
+                    });
+                };
                 try {
-                    int commandResult = server.getCommands().performCommand(
-                            server.createCommandSourceStack().withSuppressedOutput(), command);
-                    if (commandResult > 0) {
-                        VonixServerUtilities.dbAsync(() -> completeClaim(server, context, player, result));
-                    } else {
+                    CommandSourceStack commandSource = server.createCommandSourceStack()
+                            .withSuppressedOutput()
+                            .withCallback(resultCallback);
+                    server.getCommands().performPrefixedCommand(commandSource, command);
+                    // Parse failures never enter the execution queue, so refund if callback never fired.
+                    if (commandReported.compareAndSet(false, true)) {
                         VonixServerUtilities.dbAsync(() -> refundClaim(server, context, player, result));
                     }
                 } catch (Throwable throwable) {
                     VonixServerUtilities.LOGGER.error("[VSU] Prize command failed for claim {}", result.claimId(), throwable);
-                    VonixServerUtilities.dbAsync(() -> refundClaim(server, context, player, result));
+                    if (commandReported.compareAndSet(false, true)) {
+                        VonixServerUtilities.dbAsync(() -> refundClaim(server, context, player, result));
+                    }
                 }
             });
         });
@@ -232,7 +251,7 @@ public final class CrateCommands {
     }
 
     private static void reply(CommandContext<CommandSourceStack> context, String message) {
-        context.getSource().sendSuccess(Component.literal(message), false);
+        context.getSource().sendSuccess(() -> Component.literal(message), false);
     }
 
     @FunctionalInterface

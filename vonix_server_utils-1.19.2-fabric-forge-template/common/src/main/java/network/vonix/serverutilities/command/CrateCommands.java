@@ -183,7 +183,8 @@ public final class CrateCommands {
             String command = result.command().replace("{player}", player.getGameProfile().getName());
             server.execute(() -> {
                 try {
-                    int commandResult = server.getCommands().performCommand(
+                    // 1.19.2: performPrefixedCommand(CommandSourceStack, String) returns int
+                    int commandResult = server.getCommands().performPrefixedCommand(
                             server.createCommandSourceStack().withSuppressedOutput(), command);
                     if (commandResult > 0) {
                         VonixServerUtilities.dbAsync(() -> completeClaim(server, context, player, result));

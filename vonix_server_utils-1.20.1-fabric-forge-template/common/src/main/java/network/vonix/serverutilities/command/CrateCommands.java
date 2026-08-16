@@ -7,7 +7,7 @@ import com.mojang.brigadier.context.CommandContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
-import net.minecraft.network.chat.TextComponent;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import network.vonix.serverutilities.VonixServerUtilities;
@@ -153,7 +153,7 @@ public final class CrateCommands {
                 }
             });
         } catch (Exception exception) {
-            context.getSource().sendFailure(new TextComponent("§c[VSU] Invalid player or key arguments."));
+            context.getSource().sendFailure(Component.literal("§c[VSU] Invalid player or key arguments."));
             return 0;
         }
     }
@@ -183,7 +183,8 @@ public final class CrateCommands {
             String command = result.command().replace("{player}", player.getGameProfile().getName());
             server.execute(() -> {
                 try {
-                    int commandResult = server.getCommands().performCommand(
+                    // 1.20.1: performPrefixedCommand(CommandSourceStack, String) returns int
+                    int commandResult = server.getCommands().performPrefixedCommand(
                             server.createCommandSourceStack().withSuppressedOutput(), command);
                     if (commandResult > 0) {
                         VonixServerUtilities.dbAsync(() -> completeClaim(server, context, player, result));
@@ -225,14 +226,14 @@ public final class CrateCommands {
                 server.execute(() -> reply.accept(value));
             } catch (Throwable throwable) {
                 VonixServerUtilities.LOGGER.error("[VSU] Crate/key operation failed", throwable);
-                server.execute(() -> context.getSource().sendFailure(new TextComponent("§c[VSU] Operation failed; check the server log.")));
+                server.execute(() -> context.getSource().sendFailure(Component.literal("§c[VSU] Operation failed; check the server log.")));
             }
         });
         return 1;
     }
 
     private static void reply(CommandContext<CommandSourceStack> context, String message) {
-        context.getSource().sendSuccess(new TextComponent(message), false);
+        context.getSource().sendSuccess(() -> Component.literal(message), false);
     }
 
     @FunctionalInterface

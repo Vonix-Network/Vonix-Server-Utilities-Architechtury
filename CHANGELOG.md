@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-08-16
+
+### Fixed
+- **Crate command MC API ports** so production loaders compile with crate
+  features retained (`CrateCommands.java` per template):
+  - **1.20.1 Forge:** replaced removed `TextComponent` with
+    `Component.literal`; `sendSuccess` uses `Supplier<Component>`; prize
+    dispatch uses `performPrefixedCommand` (returns `int`).
+  - **1.21.1 NeoForge:** `sendSuccess` uses `Supplier<Component>`;
+    `performPrefixedCommand` is `void` — claim complete/refund is driven by
+    `CommandResultCallback` on the command source stack.
+  - **1.19.2 Forge:** prize dispatch uses `performPrefixedCommand` (returns
+    `int`); chat already used `Component.literal`.
+  - **1.18.2 Forge:** unchanged crate APIs (`TextComponent` +
+    `performCommand`); kept compiling as regression check.
+
+### Build
+- Production jars for **1.18.2 Forge**, **1.19.2 Forge**, **1.20.1 Forge**,
+  and **1.21.1 NeoForge** report `version = "1.7.0"` in
+  `META-INF/mods.toml` / `neoforge.mods.toml`, embed
+  `META-INF/jarjar/sqlite-jdbc-3.46.1.0.jar`, and do not leak `org/sqlite`
+  at the jar root.
+- Independent `clean :*:build --rerun-tasks` evidence (Grok 4.6):
+  `compileJava` / `jar` / `remapJar` executed (not `UP-TO-DATE`) for
+  1.18.2 Forge, 1.20.1 Forge, 1.21.1 NeoForge, and optional 1.19.2 Forge.
+
 ## [1.6.1] - 2026-07-02
 
 ### Fixed
