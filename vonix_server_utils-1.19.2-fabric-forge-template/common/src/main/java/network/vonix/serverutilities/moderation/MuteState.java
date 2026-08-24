@@ -126,15 +126,18 @@ public final class MuteState {
      */
     public static void hydrateFromDb() {
         try {
-            Set<UUID> next = new HashSet<>(PunishmentRepository.activeMuteUuids());
             synchronized (MUTATION_LOCK) {
+                // Keep the DB snapshot and cache reconciliation in the same
+                // critical section. Otherwise a persistence completion between
+                // the query and merge can be erased by this hydration pass.
+                Set<UUID> next = new HashSet<>(PunishmentRepository.activeMuteUuids());
                 PERSISTED_ACTIVE.retainAll(next);
                 PERSISTED_ACTIVE.addAll(next);
                 next.addAll(PENDING_PERSISTENCE.keySet());
                 MUTED.retainAll(next);
                 MUTED.addAll(next);
+                VonixServerUtilities.LOGGER.info("[VonixSU/mod] MuteState hydrated with {} active mutes", next.size());
             }
-            VonixServerUtilities.LOGGER.info("[VonixSU/mod] MuteState hydrated with {} active mutes", next.size());
         } catch (Exception e) {
             VonixServerUtilities.LOGGER.error("[VonixSU/mod] MuteState hydrate failed", e);
         }

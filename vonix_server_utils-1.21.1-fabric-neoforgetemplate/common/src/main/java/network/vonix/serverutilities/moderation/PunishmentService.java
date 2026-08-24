@@ -8,7 +8,9 @@ import network.vonix.serverutilities.VonixServerUtilities;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -159,20 +161,38 @@ public final class PunishmentService {
     public static void unmute(MinecraftServer server, UUID target, String targetName, String revokedBy) {
         VonixServerUtilities.dbAsync(() -> {
             boolean ok = PunishmentRepository.revoke(target, Punishment.Type.MUTE, revokedBy);
+            boolean verified = false;
+            boolean activeAfter = true;
             if (ok) {
-                try { MuteState.reconcilePersisted(target, PunishmentRepository.hasActiveMute(target)); }
-                catch (Exception e) { VonixServerUtilities.LOGGER.error("[VonixSU/mod] mute state reconciliation failed", e); }
+                try {
+                    activeAfter = PunishmentRepository.hasActiveMute(target);
+                    MuteState.reconcilePersisted(target, activeAfter);
+                    verified = true;
+                }
+                catch (Exception e) { VonixServerUtilities.LOGGER.error("[VSU/mod] mute state reconciliation failed", e); }
             }
+            final boolean stateVerified = verified;
+            final boolean remainingMute = activeAfter;
             server.execute(() -> {
                 if (ok) {
                     ServerPlayer online = server.getPlayerList().getPlayer(target);
                     if (online != null) {
-                        online.sendSystemMessage(Component.literal("§a[VSU] You have been unmuted."));
+                        String message = !stateVerified
+                                ? "§e[VSU] Your mute revocation was recorded, but the active mute state could not be verified."
+                                : remainingMute
+                                        ? "§e[VSU] The latest mute was revoked, but another active mute remains."
+                                        : "§a[VSU] You have been unmuted.";
+                        online.sendSystemMessage(Component.literal(message));
                     }
                 }
                 broadcastToOps(server,
-                        ok ? "§a[VSU] §e" + revokedBy + " §7unmuted §e" + targetName
-                           : "§7[VSU] §e" + targetName + " §7was not muted.");
+                        !ok ? "§7[VSU] §e" + targetName + " §7was not muted."
+                           : !stateVerified ? "§e[VSU] §e" + revokedBy + " §7revoked the latest mute for §e" + targetName
+                                + "§7, but the remaining active state could not be verified."
+                           : remainingMute ? "§e[VSU] §e" + revokedBy + " §7revoked the latest mute for §e" + targetName
+                                + "§7; another active mute remains."
+                           : "§a[VSU] §e" + revokedBy + " §7unmuted §e" + targetName
+                        );
             });
         });
     }
@@ -270,23 +290,36 @@ public final class PunishmentService {
     public static void runExpirySweep(MinecraftServer server) {
         List<Punishment> swept = PunishmentRepository.sweepExpired();
         if (swept.isEmpty()) return;
+        Map<UUID, Boolean> activeMutesAfterSweep = new HashMap<>();
         for (Punishment p : swept) {
             if (p.type() == Punishment.Type.MUTE) {
-                try { MuteState.reconcilePersisted(p.targetUuid(), PunishmentRepository.hasActiveMute(p.targetUuid())); }
-                catch (Exception e) { VonixServerUtilities.LOGGER.error("[VonixSU/mod] expired mute state reconciliation failed", e); }
+                try {
+                    boolean active = PunishmentRepository.hasActiveMute(p.targetUuid());
+                    activeMutesAfterSweep.put(p.targetUuid(), active);
+                    MuteState.reconcilePersisted(p.targetUuid(), active);
+                } catch (Exception e) {
+                    activeMutesAfterSweep.put(p.targetUuid(), true);
+                    VonixServerUtilities.LOGGER.error("[VSU/mod] expired mute state reconciliation failed", e);
+                }
             }
         }
         server.execute(() -> {
             for (Punishment p : swept) {
                 if (p.type() == Punishment.Type.MUTE) {
                     ServerPlayer online = server.getPlayerList().getPlayer(p.targetUuid());
-                    if (online != null) {
+                    boolean anotherMuteRemains = activeMutesAfterSweep.getOrDefault(p.targetUuid(), true);
+                    if (online != null && !anotherMuteRemains) {
                         online.sendSystemMessage(Component.literal("§a[VSU] Your mute has expired."));
                     }
                 }
-                broadcastToOps(server,
-                        "§7[VSU] §e" + p.targetName() + "§7's §f" + p.type().name().toLowerCase()
-                                + " §7has expired.");
+                if (p.type() != Punishment.Type.MUTE || !activeMutesAfterSweep.getOrDefault(p.targetUuid(), true)) {
+                    broadcastToOps(server,
+                            "§7[VSU] §e" + p.targetName() + "§7's §f" + p.type().name().toLowerCase()
+                                    + " §7has expired.");
+                } else {
+                    broadcastToOps(server,
+                            "§7[VSU] One of §e" + p.targetName() + "§7's mutes expired; another active mute remains.");
+                }
             }
         });
     }

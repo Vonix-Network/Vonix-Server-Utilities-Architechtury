@@ -232,7 +232,7 @@ public final class PunishmentRepository {
     }
 
     /** All UUIDs with an active MUTE row (used to seed MuteState on server start). */
-    public static List<UUID> activeMuteUuids() {
+    public static List<UUID> activeMuteUuids() throws SQLException {
         List<UUID> out = new ArrayList<>();
         long now = System.currentTimeMillis();
         try (PreparedStatement ps = conn().prepareStatement(
@@ -245,8 +245,6 @@ public final class PunishmentRepository {
                     catch (IllegalArgumentException ignore) {}
                 }
             }
-        } catch (SQLException e) {
-            VonixServerUtilities.LOGGER.error("[VonixSU/mod] activeMuteUuids failed", e);
         }
         return out;
     }
