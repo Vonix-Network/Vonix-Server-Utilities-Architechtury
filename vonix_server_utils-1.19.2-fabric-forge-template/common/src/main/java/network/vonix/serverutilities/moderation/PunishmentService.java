@@ -159,7 +159,10 @@ public final class PunishmentService {
     public static void unmute(MinecraftServer server, UUID target, String targetName, String revokedBy) {
         VonixServerUtilities.dbAsync(() -> {
             boolean ok = PunishmentRepository.revoke(target, Punishment.Type.MUTE, revokedBy);
-            if (ok) MuteState.reconcilePersisted(target, PunishmentRepository.hasActiveMute(target));
+            if (ok) {
+                try { MuteState.reconcilePersisted(target, PunishmentRepository.hasActiveMute(target)); }
+                catch (Exception e) { VonixServerUtilities.LOGGER.error("[VonixSU/mod] mute state reconciliation failed", e); }
+            }
             server.execute(() -> {
                 if (ok) {
                     ServerPlayer online = server.getPlayerList().getPlayer(target);
@@ -269,7 +272,8 @@ public final class PunishmentService {
         if (swept.isEmpty()) return;
         for (Punishment p : swept) {
             if (p.type() == Punishment.Type.MUTE) {
-                MuteState.reconcilePersisted(p.targetUuid(), PunishmentRepository.hasActiveMute(p.targetUuid()));
+                try { MuteState.reconcilePersisted(p.targetUuid(), PunishmentRepository.hasActiveMute(p.targetUuid())); }
+                catch (Exception e) { VonixServerUtilities.LOGGER.error("[VonixSU/mod] expired mute state reconciliation failed", e); }
             }
         }
         server.execute(() -> {

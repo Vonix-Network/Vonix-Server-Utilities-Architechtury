@@ -134,16 +134,13 @@ public final class PunishmentRepository {
     }
 
     /** True when an unexpired active mute row exists for the target. */
-    public static boolean hasActiveMute(UUID target) {
+    public static boolean hasActiveMute(UUID target) throws SQLException {
         try (PreparedStatement ps = conn().prepareStatement(
                 "SELECT 1 FROM punishments WHERE target_uuid=? AND type='MUTE' AND active=1 " +
                 "AND (expires_at IS NULL OR expires_at>?) LIMIT 1")) {
             ps.setString(1, target.toString());
             ps.setLong(2, System.currentTimeMillis());
             try (ResultSet rs = ps.executeQuery()) { return rs.next(); }
-        } catch (SQLException e) {
-            VonixServerUtilities.LOGGER.error("[VonixSU/mod] hasActiveMute failed", e);
-            return false;
         }
     }
 
