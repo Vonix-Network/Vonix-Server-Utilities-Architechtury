@@ -124,10 +124,21 @@ public final class PunishmentService {
                 Punishment.Type.MUTE, targetUuid, targetName,
                 issuerUuid, issuerName, reason, expiresAt);
 
+        // Apply enforcement before the asynchronous DB write so the mute is
+        // effective immediately and cannot be lost during startup hydration.
+        MuteState.addPending(targetUuid);
         VonixServerUtilities.dbAsync(() -> {
-            PunishmentRepository.insert(row);
-            MuteState.add(targetUuid);
+            long id = PunishmentRepository.insert(row);
+            if (id < 0) {
+                MuteState.clearPending(targetUuid);
+            } else {
+                MuteState.markPersisted(targetUuid);
+            }
             server.execute(() -> {
+                if (id < 0) {
+                    broadcastToOps(server, "§c[VSU] Failed to persist mute for §e" + targetName + "§c; no mute was applied.");
+                    return;
+                }
                 ServerPlayer online = server.getPlayerList().getPlayer(targetUuid);
                 if (online != null) {
                     online.sendSystemMessage(Component.literal(
@@ -148,7 +159,7 @@ public final class PunishmentService {
     public static void unmute(MinecraftServer server, UUID target, String targetName, String revokedBy) {
         VonixServerUtilities.dbAsync(() -> {
             boolean ok = PunishmentRepository.revoke(target, Punishment.Type.MUTE, revokedBy);
-            if (ok) MuteState.remove(target);
+            if (ok) MuteState.reconcilePersisted(target, PunishmentRepository.hasActiveMute(target));
             server.execute(() -> {
                 if (ok) {
                     ServerPlayer online = server.getPlayerList().getPlayer(target);
@@ -256,10 +267,14 @@ public final class PunishmentService {
     public static void runExpirySweep(MinecraftServer server) {
         List<Punishment> swept = PunishmentRepository.sweepExpired();
         if (swept.isEmpty()) return;
+        for (Punishment p : swept) {
+            if (p.type() == Punishment.Type.MUTE) {
+                MuteState.reconcilePersisted(p.targetUuid(), PunishmentRepository.hasActiveMute(p.targetUuid()));
+            }
+        }
         server.execute(() -> {
             for (Punishment p : swept) {
                 if (p.type() == Punishment.Type.MUTE) {
-                    MuteState.remove(p.targetUuid());
                     ServerPlayer online = server.getPlayerList().getPlayer(p.targetUuid());
                     if (online != null) {
                         online.sendSystemMessage(Component.literal("§a[VSU] Your mute has expired."));

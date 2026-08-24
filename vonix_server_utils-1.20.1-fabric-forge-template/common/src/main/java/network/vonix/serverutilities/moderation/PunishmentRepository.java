@@ -115,9 +115,11 @@ public final class PunishmentRepository {
         try (PreparedStatement ps = conn().prepareStatement(
                 "SELECT * FROM punishments " +
                 "WHERE target_uuid=? AND type=? AND active=1 " +
+                "AND (expires_at IS NULL OR expires_at>?) " +
                 "ORDER BY issued_at DESC LIMIT 1")) {
             ps.setString(1, target.toString());
             ps.setString(2, type.name());
+            ps.setLong(3, System.currentTimeMillis());
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     Punishment p = mapRow(rs);
@@ -130,6 +132,21 @@ public final class PunishmentRepository {
         }
         return Optional.empty();
     }
+
+    /** True when an unexpired active mute row exists for the target. */
+    public static boolean hasActiveMute(UUID target) {
+        try (PreparedStatement ps = conn().prepareStatement(
+                "SELECT 1 FROM punishments WHERE target_uuid=? AND type='MUTE' AND active=1 " +
+                "AND (expires_at IS NULL OR expires_at>?) LIMIT 1")) {
+            ps.setString(1, target.toString());
+            ps.setLong(2, System.currentTimeMillis());
+            try (ResultSet rs = ps.executeQuery()) { return rs.next(); }
+        } catch (SQLException e) {
+            VonixServerUtilities.LOGGER.error("[VonixSU/mod] hasActiveMute failed", e);
+            return false;
+        }
+    }
+
 
     /** Revoke (set active=0) the latest active row of {@code type} for {@code target}. */
     public static boolean revoke(UUID target, Punishment.Type type, String revokedBy) {

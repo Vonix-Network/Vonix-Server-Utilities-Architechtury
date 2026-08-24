@@ -23,7 +23,15 @@ tasks.register('crateRulesTest', JavaExec) {
     mainClass = 'network.vonix.serverutilities.crates.CrateRulesTest'
 }
 
+tasks.register('muteStateTest', JavaExec) {
+    group = 'verification'
+    description = 'Runs optimistic mute persistence and expiry-state regression checks.'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'network.vonix.serverutilities.moderation.MuteStateTest'
+}
+
 tasks.named('check') {
     dependsOn tasks.named('crateRulesTest')
+    dependsOn tasks.named('muteStateTest')
 }
 
