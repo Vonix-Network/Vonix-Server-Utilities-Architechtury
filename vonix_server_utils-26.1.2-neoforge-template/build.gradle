@@ -1,0 +1,103 @@
+plugins {
+    id "net.neoforged.moddev" version "2.0.140"
+    id "maven-publish"
+}
+
+version = mod_version
+group = maven_group
+
+base {
+    archivesName = archives_name
+}
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(25)
+    withSourcesJar()
+}
+
+repositories {
+    mavenCentral()
+    maven { url = "https://maven.theillusivec4.top/" }
+}
+
+dependencies {
+    // SQLite is a runtime dependency of Database and must be embedded using
+    // ModDevGradle's supported Jar-in-Jar configuration. The bounded range
+    // keeps NeoForge's nested-jar resolver compatible with other mods that
+    // embed the same library while preferring the tested version.
+    jarJar(implementation("org.xerial:sqlite-jdbc:3.46.1.0")) {
+        version {
+            strictly "[3.46.1.0,)"
+            prefer "3.46.1.0"
+        }
+    }
+
+    // Optional integrations remain compile-only; their target-compatible
+    // runtime mods are supplied by the server when present.
+    compileOnly "net.luckperms:api:5.4"
+}
+
+neoForge {
+    version = neoforge_version
+    validateAccessTransformers = true
+
+    runs {
+        server {
+            server()
+            gameDirectory = project.file("runs/server")
+        }
+    }
+
+    mods {
+        vonix_server_utilities {
+            sourceSet sourceSets.main
+        }
+    }
+}
+
+processResources {
+    inputs.property "version", project.version
+    filesMatching("META-INF/neoforge.mods.toml") {
+        expand version: project.version
+    }
+}
+
+sourceSets {
+    test {
+        java.srcDir "src/test/java"
+    }
+}
+
+tasks.register("muteStateTest", JavaExec) {
+    group = "verification"
+    description = "Runs optimistic mute persistence and expiry-state regression checks."
+    dependsOn tasks.named("testClasses")
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = "network.vonix.serverutilities.moderation.MuteStateTest"
+}
+
+tasks.register("crateRulesTest", JavaExec) {
+    group = "verification"
+    description = "Runs crate percentage, selection, playtime, and identifier regression checks."
+    dependsOn tasks.named("testClasses")
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = "network.vonix.serverutilities.crates.CrateRulesTest"
+}
+
+tasks.named("check") {
+    dependsOn tasks.named("muteStateTest")
+    dependsOn tasks.named("crateRulesTest")
+}
+
+tasks.named("test") {
+    // Regression probes are JavaExec main classes; no JUnit discovery is expected.
+    failOnNoDiscoveredTests = false
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+        }
+    }
+}

@@ -1,8 +1,10 @@
 # Vonix Server Utilities (VSU)
 
-A server-side essentials mod for Minecraft — homes, warps, kits, teleport, social, admin tooling, moderation, and Venary site integration — built on **Architectury** for **Forge, NeoForge, and Fabric** across **four Minecraft versions**.
+A server-side essentials mod for Minecraft — homes, warps, kits, teleport, social, admin tooling, moderation, and Venary site integration — built on **Architectury** for **Forge, NeoForge, and Fabric** across the supported Minecraft target versions.
 
 **Current version:** 1.7.1 · See [CHANGELOG.md](CHANGELOG.md) · License: All Rights Reserved (Vonix Network)
+
+An untagged Minecraft **26.1.2 / NeoForge 26.1.2.93** candidate is also present under `vonix_server_utils-26.1.2-neoforge-template/`; it is not included in the immutable `v1.7.1` release.
 
 ---
 
@@ -24,8 +26,9 @@ A server-side essentials mod for Minecraft — homes, warps, kits, teleport, soc
 | 1.19.2 | ✅ | — | ✅ | 17 |
 | 1.20.1 | ✅ | — | ✅ | 17 |
 | 1.21.1 | — | ✅ | ✅ | 21 |
+| 26.1.2 | — | ✅ candidate | — | 25 |
 
-Each MC version lives in its own Architectury template directory (`vonix_server_utils-<mc>-...-template/`) with shared `common/` source and loader-specific `fabric/`, `forge/`, or `neoforge/` modules. Source parity across versions is maintained by the porting workflow (`port.py`); wave-1 changes land in 1.21.1 first, then port to the older trees.
+Each established MC version lives in its own Architectury template directory (`vonix_server_utils-<mc>-...-template/`) with shared `common/` source and loader-specific `fabric/`, `forge/`, or `neoforge/` modules. The 26.1.2 target is intentionally a dedicated single-loader ModDevGradle project because NeoForge 26.1.x uses a different Java 25/toolchain architecture. Source parity across the established Architectury versions is maintained by the porting workflow (`port.py`).
 
 ---
 
@@ -109,6 +112,7 @@ VSU uses a separate Gradle project per MC version, all Architectury-based:
 - `vonix_server_utils-1.19.2-fabric-forge-template/` — MC 1.19.2, Java 17
 - `vonix_server_utils-1.20.1-fabric-forge-template/` — MC 1.20.1, Java 17
 - `vonix_server_utils-1.21.1-fabric-neoforgetemplate/` — MC 1.21.1, Java 21
+- `vonix_server_utils-26.1.2-neoforge-template/` — MC 26.1.2, NeoForge 26.1.2.93, Java 25 (candidate)
 
 Build a single target manually:
 
@@ -124,6 +128,8 @@ python build-menu.py
 ```
 
 JDK requirements: install JDK 17 (1.18.2/1.19.2/1.20.1) and JDK 21 (1.21.1) and point `JAVA_HOME` at the right one per target. The build menu handles JDK selection automatically.
+
+The 26.1.2 candidate requires JDK 25 and is built from its standalone template with `./gradlew --no-daemon clean build`.
 
 ---
 

@@ -2,7 +2,7 @@
 """
 Vonix Server Utilities — Build Menu
 =====================================
-Unified build interface for all four Architectury template versions.
+Unified build interface for the supported VSU template versions.
 Auto-detects installed Java versions and selects the correct JDK for each
 Minecraft version. All output is live-streamed and logged.
 """
@@ -68,6 +68,7 @@ def scan_projects() -> list[dict]:
         # Parse gradle.properties
         mc_version = None
         enabled_platforms = []
+        single_loader = False
         
         try:
             with open(gradle_props, "r", encoding="utf-8") as f:
@@ -81,20 +82,24 @@ def scan_projects() -> list[dict]:
                             mc_version = val
                         elif key == "enabled_platforms":
                             enabled_platforms = [p.strip() for p in val.split(",") if p.strip()]
+                        elif key == "single_loader":
+                            single_loader = val.lower() in ("1", "true", "yes")
         except Exception:
             continue
             
         if not mc_version:
             continue
             
-        # Determine Java major version based on MC version
-        # Minecraft 1.20.5+ requires Java 21. Older usually use Java 17.
+        # Determine Java major version based on the exact target family.
         java_major = 17
         parts = mc_version.split('.')
         if len(parts) >= 2:
+            major = int(parts[0])
             minor = int(parts[1])
             patch = int(parts[2]) if len(parts) > 2 else 0
-            if minor > 20 or (minor == 20 and patch >= 5):
+            if major >= 26:
+                java_major = 25
+            elif minor > 20 or (minor == 20 and patch >= 5):
                 java_major = 21
 
         # Fallback platforms if none defined
@@ -111,6 +116,7 @@ def scan_projects() -> list[dict]:
             "mc_version": mc_version,
             "java_major": java_major,
             "platforms": enabled_platforms,
+            "single_loader": single_loader,
             "gradle_cmd": "gradlew.bat" if sys.platform == "win32" else "./gradlew"
         })
         
@@ -245,8 +251,15 @@ def run_gradle(project: dict, platform: str | None, task: str, java_home: Path) 
         print(c(RED, f"  [!] Project directory not found: {proj_dir}"))
         return False
 
-    # Determine Gradle tasks
-    if platform:
+    # Standalone ModDevGradle targets expose root tasks, not loader subprojects.
+    if project.get("single_loader"):
+        if task == "clean":
+            tasks = ["clean"]
+        elif task == "cleanbuild":
+            tasks = ["clean", "build"]
+        else:
+            tasks = ["build"]
+    elif platform:
         if task == "clean":
             tasks = [f"{platform}:clean"]
         elif task == "cleanbuild":

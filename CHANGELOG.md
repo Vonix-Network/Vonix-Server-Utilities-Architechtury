@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Added an untagged Minecraft **26.1.2 / NeoForge 26.1.2.93** candidate template using ModDevGradle 2.0.140 and Java 25.
+- Carried the 1.7.1 TempMute hydration, optimistic enforcement, persistence-failure, and expiry-safety fixes into the 26.1.2 target.
+- Added target-specific `ServerPlayer.nameAndId()` adaptation for the NeoForge 26.1 `PlayerList.isOp` API and executable regression probes.
+
+### Build
+- The candidate builds as `vonix_server_utilities-1.7.1-26.1.2.93-candidate.jar`.
+- The candidate is not part of the immutable `v1.7.1` release and has not been published or deployed.
+
 ## [1.7.1] - 2026-08-25
 
 ### Fixed
