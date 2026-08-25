@@ -15,13 +15,13 @@ import java.nio.file.Path;
 public final class VsuPlatformEvents implements PlatformEvents {
     @Override public void register(Callbacks c) {
         CommandRegistrationEvent.EVENT.register((d, r, s) -> c.commands().accept(d));
-        LifecycleEvent.SERVER_STARTING.register(c.serverStarting());
-        LifecycleEvent.SERVER_STARTED.register(c.serverStarted());
-        LifecycleEvent.SERVER_STOPPING.register(c.serverStopping());
-        LifecycleEvent.SERVER_STOPPED.register(c.serverStopped());
-        TickEvent.SERVER_POST.register(c.serverTick());
-        PlayerEvent.PLAYER_JOIN.register(c.playerJoin());
-        PlayerEvent.PLAYER_QUIT.register(c.playerQuit());
+        LifecycleEvent.SERVER_STARTING.register(server -> c.serverStarting().accept(server));
+        LifecycleEvent.SERVER_STARTED.register(server -> c.serverStarted().accept(server));
+        LifecycleEvent.SERVER_STOPPING.register(server -> c.serverStopping().accept(server));
+        LifecycleEvent.SERVER_STOPPED.register(server -> c.serverStopped().accept(server));
+        TickEvent.SERVER_POST.register(server -> c.serverTick().accept(server));
+        PlayerEvent.PLAYER_JOIN.register(player -> c.playerJoin().accept(player));
+        PlayerEvent.PLAYER_QUIT.register(player -> c.playerQuit().accept(player));
         EntityEvent.LIVING_DEATH.register((e, s) -> { c.livingDeath().accept(e, s); return EventResult.pass(); });
     }
     @Override public Path configDirectory() { return dev.architectury.platform.Platform.getConfigFolder(); }
