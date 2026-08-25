@@ -40,6 +40,7 @@ dependencies {
 
     common(project(path: ':common', configuration: 'namedElements')) { transitive = false }
     shadowBundle project(path: ':common', configuration: 'transformProductionFabric')
+    shadowBundle project(path: ':core')
 
     // sqlite-jdbc via Fabric-loom JarInJar (include) — NOT shaded. libsqlitejdbc.{so,dylib,dll}
     // has FindClass("org/sqlite/core/NativeDB") baked into JNI_OnLoad, so relocation breaks

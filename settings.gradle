@@ -1,0 +1,18 @@
+pluginManagement {
+    repositories {
+        maven { url = 'https://maven.fabricmc.net/' }
+        maven { url = 'https://maven.architectury.dev/' }
+        maven { url = 'https://files.minecraftforge.net/maven/' }
+        gradlePluginPortal()
+    }
+}
+
+plugins {
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '0.8.0'
+}
+
+rootProject.name = 'vonix_server_utilities-r3-pilot'
+include 'core', 'common', 'fabric', 'neoforge'
+project(':common').projectDir = file('vonix_server_utils-1.21.1-fabric-neoforgetemplate/common')
+project(':fabric').projectDir = file('vonix_server_utils-1.21.1-fabric-neoforgetemplate/fabric')
+project(':neoforge').projectDir = file('vonix_server_utils-1.21.1-fabric-neoforgetemplate/neoforge')

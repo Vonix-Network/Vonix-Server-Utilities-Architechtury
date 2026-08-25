@@ -48,6 +48,7 @@ dependencies {
 
     common(project(path: ':common', configuration: 'namedElements')) { transitive = false }
     shadowBundle project(path: ':common', configuration: 'transformProductionNeoForge')
+    shadowBundle project(path: ':core')
     // slf4j-api: previously came in transitively via sqlite-jdbc shadowBundle.
     // After moving sqlite-jdbc to nestedJar, slf4j-api must be pulled in explicitly.
     shadowBundle 'org.slf4j:slf4j-api:1.7.36'
@@ -150,4 +151,3 @@ tasks.named('remapJar') {
         logger.lifecycle "Embedded JarInJar nested ${nested.name} into ${outJar.name}"
     }
 }
-
