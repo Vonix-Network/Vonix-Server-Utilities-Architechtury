@@ -33,11 +33,15 @@ public final class MuteState {
     private static final Map<UUID, Integer> PENDING_PERSISTENCE = new ConcurrentHashMap<>();
     private static final Set<UUID> PERSISTED_ACTIVE = ConcurrentHashMap.newKeySet();
     private static final Object MUTATION_LOCK = new Object();
+    private static volatile boolean HYDRATION_COMPLETE = false;
 
     private MuteState() {}
 
     public static boolean isMuted(UUID uuid) {
         if (uuid == null) return false;
+        // Until the first successful DB snapshot, an empty cache is ambiguous.
+        // Fail closed so a hydration outage cannot silently unmute players.
+        if (!HYDRATION_COMPLETE) return true;
         if (!MUTED.contains(uuid)) return false;
         // Bypass check: LP-gated. If LP is absent, no bypass possible — mute stands.
         if (LuckPermsBridge.isPresent() && LuckPermsBridge.hasPermission(uuid, BYPASS_NODE)) {
@@ -115,7 +119,12 @@ public final class MuteState {
             MUTED.clear();
             PENDING_PERSISTENCE.clear();
             PERSISTED_ACTIVE.clear();
+            HYDRATION_COMPLETE = false;
         }
+    }
+
+    static void markHydrationComplete() {
+        synchronized (MUTATION_LOCK) { HYDRATION_COMPLETE = true; }
     }
 
     /**
@@ -136,6 +145,7 @@ public final class MuteState {
                 next.addAll(PENDING_PERSISTENCE.keySet());
                 MUTED.retainAll(next);
                 MUTED.addAll(next);
+                HYDRATION_COMPLETE = true;
                 VonixServerUtilities.LOGGER.info("[VonixSU/mod] MuteState hydrated with {} active mutes", next.size());
             }
         } catch (Exception e) {

@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - fail closed when active-mute hydration cannot read SQLite;
   - reconcile overlapping active mutes before clearing enforcement on expiry or revocation;
   - report persistence and reconciliation uncertainty instead of claiming success.
-- Added common-module regression coverage for optimistic enforcement, pending persistence, failed writes, hydration, and expiry-safe state removal.
+- Added common-module regression coverage for pre-hydration fail-closed enforcement, hydration readiness recovery, optimistic enforcement, pending persistence, failed writes, and expiry-safe state removal.
 
 ### Build
 - Rebuilt the eight supported Fabric/Forge/NeoForge artifacts for Minecraft 1.18.2, 1.19.2, 1.20.1, and 1.21.1 with Java 17/21 as applicable.

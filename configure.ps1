@@ -10,7 +10,7 @@ foreach ($v in $versions) {
     $gp = "$dir\gradle.properties"
     if (Test-Path $gp) {
         $content = Get-Content $gp -Raw
-        $content = $content -replace "mod_version\s*=\s*.*", "mod_version = 1.0.1"
+        $content = $content -replace "mod_version\s*=\s*.*", "mod_version = 1.7.1"
         $content = $content -replace "maven_group\s*=\s*.*", "maven_group = network.vonix.serverutilities"
         $content = $content -replace "archives_base_name\s*=\s*.*", "archives_base_name = vonix_server_utilities"
         $content = $content -replace "archives_name\s*=\s*.*", "archives_name = vonix_server_utilities"

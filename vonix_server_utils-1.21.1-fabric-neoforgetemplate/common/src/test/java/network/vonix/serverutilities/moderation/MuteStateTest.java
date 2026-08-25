@@ -10,6 +10,9 @@ public final class MuteStateTest {
         UUID target = UUID.fromString("00000000-0000-0000-0000-000000000001");
 
         MuteState.clear();
+        require(MuteState.isMuted(target), "mute enforcement must fail closed before startup hydration completes");
+        MuteState.markHydrationComplete();
+        require(!MuteState.isMuted(target), "successful hydration must restore normal per-player mute checks");
         MuteState.addPending(target);
         MuteState.addPending(target);
         require(MuteState.snapshot().contains(target), "pending mute must enforce immediately");
