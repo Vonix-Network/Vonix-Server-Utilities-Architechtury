@@ -2,7 +2,7 @@
 
 A server-side essentials mod for Minecraft — homes, warps, kits, teleport, social, admin tooling, moderation, and Venary site integration — built on **Architectury** for **Forge, NeoForge, and Fabric** across **four Minecraft versions**.
 
-**Current version:** 1.6.0 · See [CHANGELOG.md](CHANGELOG.md) · License: All Rights Reserved (Vonix Network)
+**Current version:** 1.7.1 · See [CHANGELOG.md](CHANGELOG.md) · License: All Rights Reserved (Vonix Network)
 
 ---
 
@@ -10,7 +10,7 @@ A server-side essentials mod for Minecraft — homes, warps, kits, teleport, soc
 
 - **Player QoL** — `/home`, `/warp`, `/kit`, `/tpa`, `/back`, `/spawn`, chat & messaging.
 - **Admin toolkit** — vanish, god, fly, heal, peek (`/invsee`, `/enderchest`, `/backsee`, `/accsee`), weather/time control.
-- **Moderation (v1.6.0)** — SQLite-backed `/tempban`, `/mute`, `/kick`, `/warn`, `/banlist` with duration parser and expiry sweeper.
+- **Moderation (v1.7.1)** — SQLite-backed `/tempban`, `/mute`, `/kick`, `/warn`, `/banlist` with duration parser, race-safe mute enforcement, and expiry sweeper.
 - **LuckPerms-aware permissions (v1.6.0)** — every command has a `vsu.*` permission node, with graceful vanilla op-level fallback when LuckPerms is absent.
 - **Venary site integration** — account linking (`/link`), periodic player sync, and automatic donation-rank → LuckPerms group sync.
 

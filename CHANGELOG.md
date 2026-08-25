@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.1] - 2026-08-25
+
+### Fixed
+- **TempMute enforcement races** across all four Minecraft templates:
+  - apply mute state before asynchronous persistence so the first chat/command is blocked;
+  - preserve pending writes during startup hydration;
+  - fail closed when active-mute hydration cannot read SQLite;
+  - reconcile overlapping active mutes before clearing enforcement on expiry or revocation;
+  - report persistence and reconciliation uncertainty instead of claiming success.
+- Added common-module regression coverage for optimistic enforcement, pending persistence, failed writes, hydration, and expiry-safe state removal.
+
+### Build
+- Rebuilt the eight supported Fabric/Forge/NeoForge artifacts for Minecraft 1.18.2, 1.19.2, 1.20.1, and 1.21.1 with Java 17/21 as applicable.
+
 ## [1.7.0] - 2026-08-16
 
 ### Fixed
