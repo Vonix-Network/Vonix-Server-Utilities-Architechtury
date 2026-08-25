@@ -1,137 +1,58 @@
 package network.vonix.serverutilities.listener;
 
-import dev.architectury.event.EventResult;
-import dev.architectury.event.events.common.CommandRegistrationEvent;
-import dev.architectury.event.events.common.EntityEvent;
-import dev.architectury.event.events.common.LifecycleEvent;
-import dev.architectury.event.events.common.PlayerEvent;
+import com.mojang.brigadier.CommandDispatcher;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.LivingEntity;
 import network.vonix.serverutilities.VonixServerUtilities;
 import network.vonix.serverutilities.admin.AdminManager;
-import network.vonix.serverutilities.command.ModCommands;
-import network.vonix.serverutilities.command.CrateCommands;
-import network.vonix.serverutilities.crates.CratePlaytimeTask;
-import network.vonix.serverutilities.command.UtilityCommands;
-import network.vonix.serverutilities.command.WorldCommands;
+import network.vonix.serverutilities.command.*;
 import network.vonix.serverutilities.config.ModConfig;
-import network.vonix.serverutilities.donation_ranks.RankGroupSyncer;
-import network.vonix.serverutilities.donation_ranks.RankSyncTask;
-import network.vonix.serverutilities.features.FeatureRegistry;
-import network.vonix.serverutilities.features.ServerConfigClient;
+import network.vonix.serverutilities.crates.CratePlaytimeTask;
+import network.vonix.serverutilities.donation_ranks.*;
+import network.vonix.serverutilities.features.*;
 import network.vonix.serverutilities.moderation.ModerationBootstrap;
+import network.vonix.serverutilities.platform.PlatformEvents;
 import network.vonix.serverutilities.teleport.TeleportManager;
-import network.vonix.serverutilities.venary.LinkCommands;
-import network.vonix.serverutilities.venary.PlayerSyncTask;
-import network.vonix.serverutilities.venary.VenaryClient;
+import network.vonix.serverutilities.venary.*;
 
-/**
- * Registers Architectury lifecycle, command, and entity events.
- * All event registrations happen at mod init time.
- */
+/** Shared behavior; Fabric and Forge modules provide event delivery. */
 public final class EventHandler {
-
+    private EventHandler() {}
     public static void init() {
-
-        // ── Moderation subsystem ──────────────────────────────────────────────
         ModerationBootstrap.init();
-
-        // ── Commands ──────────────────────────────────────────────────────────
-        CommandRegistrationEvent.EVENT.register((dispatcher, selection) -> {
-            ModCommands.register(dispatcher);
-            CrateCommands.register(dispatcher);
-            UtilityCommands.register(dispatcher);
-            WorldCommands.register(dispatcher);
-            LinkCommands.register(dispatcher);
-            VonixServerUtilities.LOGGER.info("[VonixSU] All commands registered.");
-        });
-
-        // ── Server starting — load config & open DB ───────────────────────────
-        LifecycleEvent.SERVER_STARTING.register(server -> {
-            ModConfig.INSTANCE.load(server.getServerDirectory().toPath().resolve("config"));
-            // Pass server so the DB can locate the VonixCore DB for migration
-            VonixServerUtilities.getInstance().getDatabase().init(server);
-            // Virtual key and crate schema. Creation is idempotent and stays on the DB thread.
-            VonixServerUtilities.dbAsync(() -> {
-                try {
-                    var manager = network.vonix.serverutilities.crates.CrateRepository.getInstance();
-                    manager.ensureSchema(VonixServerUtilities.getInstance().getDatabase().getConnection());
-                    manager.createCrate("playtime", "playtime");
-                    manager.createCrate("event", "event");
-                    int recovered = manager.recoverPendingClaims();
-                    if (recovered > 0) VonixServerUtilities.LOGGER.warn("[VonixSU] Refunded {} pending crate claims after startup.", recovered);
-                } catch (Exception e) {
-                    VonixServerUtilities.LOGGER.error("[VonixSU] Crate/key schema initialisation failed", e);
-                }
-            });
-            VonixServerUtilities.dbAsync(() -> {
-                TeleportManager.getInstance().hydrateFromDb();
-                UtilityCommands.hydrateFromDb();
-            });
-            // Load (or seed default) kit definitions from kits.json.
-            VonixServerUtilities.dbAsync(() ->
-                    network.vonix.serverutilities.kits.KitManager.getInstance()
-                            .loadFromJson(server));
-            // Bring up the Venary HTTP layer using the freshly-loaded config.
-            // Even when disabled this is cheap; the client itself short-circuits.
-            VenaryClient.init(ModConfig.INSTANCE.getVenaryConfig());
-            PlayerSyncTask.register();
-            // Feature-flag registry: first call runs the first-run heuristic
-            // against the (now-open) SQLite DB, then the poller takes over.
-            CratePlaytimeTask.register();
-            FeatureRegistry.getInstance();
-            ServerConfigClient.startPolling();
-        });
-
-        // ── Server started — LP service is now registered, sync donation groups ──
-        LifecycleEvent.SERVER_STARTED.register(server -> {
-            // RankGroupSyncer is a no-op if LuckPerms is absent or
-            // donation_ranks is empty — safe to call unconditionally.
-            try { RankGroupSyncer.syncAll(); }
-            catch (Throwable t) {
-                VonixServerUtilities.LOGGER.warn("[VonixSU] RankGroupSyncer threw: {}", t.getMessage());
-            }
-        });
-
-        // ── Server stopped — flush pending tasks then close DB ────────────────
-        LifecycleEvent.SERVER_STOPPED.register(server -> {
-            TeleportManager.getInstance().clear();
-            AdminManager.getInstance().clear();
-            PlayerSyncTask.clear();
-            LinkCommands.clearCooldowns();
-            VenaryClient venary = VenaryClient.get();
-            if (venary != null) venary.shutdown();
-            CratePlaytimeTask.clear();
-            // Shutdown executor first so queued DB writes finish before connection closes
-            VonixServerUtilities.getInstance().shutdown();
-            VonixServerUtilities.getInstance().getDatabase().close();
-        });
-
-        // ── Player join ───────────────────────────────────────────────────────
-        PlayerEvent.PLAYER_JOIN.register(player -> {
-            UtilityCommands.onPlayerJoin(player);
-            PlayerSyncTask.onPlayerJoin(player);
-            RankSyncTask.onJoin(player);
-        });
-
-        // ── Player quit — clean up per-player in-memory state ─────────────────
-        PlayerEvent.PLAYER_QUIT.register(player -> {
-            UtilityCommands.onPlayerLeave(player.getUUID());
-            TeleportManager.getInstance().clearPlayer(player.getUUID());
-            PlayerSyncTask.onPlayerLeave(player.getUUID());
-            LinkCommands.onPlayerLeave(player.getUUID());
-        });
-
-        // ── Death location tracking ───────────────────────────────────────────
-        // Saves the death position ONLY to the death-location store.
-        // Does NOT call saveLastLocation() so /back history is never contaminated
-        // by deaths — the two histories remain fully independent.
-        EntityEvent.LIVING_DEATH.register((entity, source) -> {
-            if (entity instanceof ServerPlayer player) {
-                TeleportManager.getInstance().saveDeathLocation(player);
-                VonixServerUtilities.LOGGER.debug("[VonixSU] Death location saved for {}",
-                        player.getName().getString());
-            }
-            return EventResult.pass();
-        });
+        PlatformEvents.Holder.get().register(new PlatformEvents.Callbacks(
+                EventHandler::registerCommands, EventHandler::serverStarting, EventHandler::serverStarted,
+                EventHandler::serverStopping, EventHandler::serverStopped, EventHandler::serverTick,
+                EventHandler::playerJoin, EventHandler::playerQuit, EventHandler::livingDeath));
     }
+    private static void registerCommands(CommandDispatcher<CommandSourceStack> d) {
+        ModCommands.register(d); CrateCommands.register(d); UtilityCommands.register(d); WorldCommands.register(d);
+        LinkCommands.register(d); ModerationBootstrap.registerCommands(d);
+        VonixServerUtilities.LOGGER.info("[VonixSU] All commands registered.");
+    }
+    private static void serverStarting(MinecraftServer s) {
+        ModConfig.INSTANCE.load(s.getServerDirectory().toPath().resolve("config"));
+        VonixServerUtilities.getInstance().getDatabase().init(s);
+        VonixServerUtilities.dbAsync(() -> { try {
+            TeleportManager.getInstance().hydrateFromDb(); UtilityCommands.hydrateFromDb();
+            var r = network.vonix.serverutilities.crates.CrateRepository.getInstance();
+            r.ensureSchema(VonixServerUtilities.getInstance().getDatabase().getConnection());
+            r.createCrate("playtime", "playtime"); r.createCrate("event", "event"); r.recoverPendingClaims();
+        } catch (Exception e) { VonixServerUtilities.LOGGER.error("[VSU] startup initialization failed", e); } });
+        VenaryClient.init(ModConfig.INSTANCE.getVenaryConfig()); PlayerSyncTask.register(); CratePlaytimeTask.register();
+        FeatureRegistry.getInstance(); ServerConfigClient.startPolling();
+    }
+    private static void serverStarted(MinecraftServer s) { try { RankGroupSyncer.syncAll(); } catch (Throwable t) { VonixServerUtilities.LOGGER.warn("[VSU] rank sync failed: {}", t.getMessage()); } ModerationBootstrap.serverStarted(s); }
+    private static void serverStopping(MinecraftServer s) { ModerationBootstrap.serverStopping(s); }
+    private static void serverStopped(MinecraftServer s) {
+        TeleportManager.getInstance().clear(); AdminManager.getInstance().clear(); PlayerSyncTask.clear(); CratePlaytimeTask.clear(); LinkCommands.clearCooldowns();
+        VenaryClient v = VenaryClient.get(); if (v != null) v.shutdown(); VonixServerUtilities.getInstance().shutdown(); VonixServerUtilities.getInstance().getDatabase().close();
+    }
+    private static void serverTick(MinecraftServer s) { PlayerSyncTask.onServerTick(s); CratePlaytimeTask.onServerTick(s); ServerConfigClient.onTick(s); }
+    private static void playerJoin(ServerPlayer p) { UtilityCommands.onPlayerJoin(p); PlayerSyncTask.onPlayerJoin(p); RankSyncTask.onJoin(p); }
+    private static void playerQuit(ServerPlayer p) { UtilityCommands.onPlayerLeave(p.getUUID()); TeleportManager.getInstance().clearPlayer(p.getUUID()); PlayerSyncTask.onPlayerLeave(p.getUUID()); LinkCommands.onPlayerLeave(p.getUUID()); }
+    private static void livingDeath(LivingEntity e, DamageSource s) { if (e instanceof ServerPlayer p) TeleportManager.getInstance().saveDeathLocation(p); }
 }

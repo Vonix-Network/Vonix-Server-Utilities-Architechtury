@@ -9,6 +9,7 @@ import network.vonix.serverutilities.VonixServerUtilities;
 @Mod(VonixServerUtilities.MOD_ID)
 public final class VonixServerUtilitiesForge {
     public VonixServerUtilitiesForge() {
+        network.vonix.serverutilities.platform.PlatformEvents.Holder.install(new VsuPlatformEvents());
         EventBuses.registerModEventBus(VonixServerUtilities.MOD_ID,
                 FMLJavaModLoadingContext.get().getModEventBus());
         VonixServerUtilities.init();

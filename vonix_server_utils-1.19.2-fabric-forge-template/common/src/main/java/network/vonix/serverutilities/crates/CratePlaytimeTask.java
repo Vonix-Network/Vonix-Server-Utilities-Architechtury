@@ -1,6 +1,5 @@
 package network.vonix.serverutilities.crates;
 
-import dev.architectury.event.events.common.TickEvent;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.stats.Stats;
@@ -22,10 +21,9 @@ public final class CratePlaytimeTask {
     public static void register() {
         if (registered) return;
         registered = true;
-        TickEvent.SERVER_POST.register(CratePlaytimeTask::onServerTick);
     }
 
-    private static void onServerTick(MinecraftServer server) {
+    public static void onServerTick(MinecraftServer server) {
         if (++ticksSinceCheck < CHECK_INTERVAL_TICKS) return;
         ticksSinceCheck = 0;
         int minutes = ModConfig.INSTANCE.getPlaytimeKeyIntervalMinutes();

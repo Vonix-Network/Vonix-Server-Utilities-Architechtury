@@ -1,7 +1,5 @@
 package network.vonix.serverutilities.moderation;
 
-import dev.architectury.event.events.common.CommandRegistrationEvent;
-import dev.architectury.event.events.common.LifecycleEvent;
 import network.vonix.serverutilities.VonixServerUtilities;
 
 /**
@@ -26,19 +24,8 @@ public final class ModerationBootstrap {
         if (wired) return;
         wired = true;
 
-        CommandRegistrationEvent.EVENT.register((dispatcher, registry, selection) -> {
-            ModerationCommands.register(dispatcher);
-            VonixServerUtilities.LOGGER.info("[VonixSU/mod] Moderation commands registered.");
-        });
-
-        LifecycleEvent.SERVER_STARTED.register(server -> {
-            VonixServerUtilities.dbAsync(MuteState::hydrateFromDb);
-            ExpirySweeper.start(server);
-        });
-
-        LifecycleEvent.SERVER_STOPPING.register(server -> {
-            ExpirySweeper.stop();
-            MuteState.clear();
-        });
     }
+    public static void registerCommands(com.mojang.brigadier.CommandDispatcher<net.minecraft.commands.CommandSourceStack> dispatcher) { ModerationCommands.register(dispatcher); VonixServerUtilities.LOGGER.info("[VonixSU/mod] Moderation commands registered."); }
+    public static void serverStarted(net.minecraft.server.MinecraftServer server) { VonixServerUtilities.dbAsync(MuteState::hydrateFromDb); ExpirySweeper.start(server); }
+    public static void serverStopping(net.minecraft.server.MinecraftServer server) { ExpirySweeper.stop(); MuteState.clear(); }
 }

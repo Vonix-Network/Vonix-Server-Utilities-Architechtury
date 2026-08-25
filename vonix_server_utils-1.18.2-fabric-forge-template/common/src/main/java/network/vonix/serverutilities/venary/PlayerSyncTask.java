@@ -1,6 +1,5 @@
 package network.vonix.serverutilities.venary;
 
-import dev.architectury.event.events.common.TickEvent;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import network.vonix.serverutilities.VonixServerUtilities;
@@ -39,7 +38,6 @@ public final class PlayerSyncTask {
     private PlayerSyncTask() {}
 
     public static void register() {
-        TickEvent.SERVER_POST.register(PlayerSyncTask::onServerTick);
     }
 
     /** Called from EventHandler player-join. */
@@ -52,7 +50,7 @@ public final class PlayerSyncTask {
         sessionStartTick.remove(uuid);
     }
 
-    private static void onServerTick(MinecraftServer server) {
+    public static void onServerTick(MinecraftServer server) {
         VenaryClient client = VenaryClient.get();
         if (client == null) return;
         VenaryConfig cfg = client.getConfig();

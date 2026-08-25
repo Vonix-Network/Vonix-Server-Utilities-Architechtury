@@ -1,7 +1,6 @@
 package network.vonix.serverutilities.features;
 
 import com.google.gson.JsonObject;
-import dev.architectury.event.events.common.TickEvent;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import network.vonix.serverutilities.VonixServerUtilities;
@@ -43,7 +42,6 @@ public final class ServerConfigClient {
     public static void startPolling() {
         if (registered) return;
         registered = true;
-        TickEvent.SERVER_POST.register(ServerConfigClient::onTick);
         VonixServerUtilities.LOGGER.info("[VonixSU] Feature-flag poller registered (every {}s).", POLL_INTERVAL_SECONDS);
     }
 
@@ -52,7 +50,7 @@ public final class ServerConfigClient {
         forceFetch = true;
     }
 
-    private static void onTick(MinecraftServer server) {
+    public static void onTick(MinecraftServer server) {
         VenaryClient client = VenaryClient.get();
         if (client == null) return;
         if (!client.getConfig().isEnabled()) return;
