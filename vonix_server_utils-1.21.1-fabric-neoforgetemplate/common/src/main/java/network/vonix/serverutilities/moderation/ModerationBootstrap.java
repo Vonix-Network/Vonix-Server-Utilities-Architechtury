@@ -1,44 +1,30 @@
 package network.vonix.serverutilities.moderation;
 
-import dev.architectury.event.events.common.CommandRegistrationEvent;
-import dev.architectury.event.events.common.LifecycleEvent;
+import com.mojang.brigadier.CommandDispatcher;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.server.MinecraftServer;
 import network.vonix.serverutilities.VonixServerUtilities;
 
-/**
- * Wires the moderation subsystem into the Architectury event bus.
- *
- * Call exactly once from the common entry point (see {@link
- * network.vonix.serverutilities.listener.EventHandler}). Idempotent.
- *
- * Responsibilities:
- *   - register the 11 moderation commands on CommandRegistrationEvent
- *   - hydrate {@link MuteState} from DB on SERVER_STARTED
- *   - start {@link ExpirySweeper} on SERVER_STARTED
- *   - stop sweeper and clear cache on SERVER_STOPPING
- */
+/** Shared moderation lifecycle behavior; loader modules provide event delivery. */
 public final class ModerationBootstrap {
-
-    private static boolean wired = false;
-
+    private static boolean wired;
     private ModerationBootstrap() {}
 
-    public static synchronized void init() {
-        if (wired) return;
-        wired = true;
+    public static synchronized void init() { wired = true; }
 
-        CommandRegistrationEvent.EVENT.register((dispatcher, registry, selection) -> {
-            ModerationCommands.register(dispatcher);
-            VonixServerUtilities.LOGGER.info("[VonixSU/mod] Moderation commands registered.");
-        });
+    public static void registerCommands(CommandDispatcher<CommandSourceStack> dispatcher) {
+        if (!wired) init();
+        ModerationCommands.register(dispatcher);
+        VonixServerUtilities.LOGGER.info("[VSU/mod] Moderation commands registered.");
+    }
 
-        LifecycleEvent.SERVER_STARTED.register(server -> {
-            VonixServerUtilities.dbAsync(MuteState::hydrateFromDb);
-            ExpirySweeper.start(server);
-        });
+    public static void serverStarted(MinecraftServer server) {
+        VonixServerUtilities.dbAsync(MuteState::hydrateFromDb);
+        ExpirySweeper.start(server);
+    }
 
-        LifecycleEvent.SERVER_STOPPING.register(server -> {
-            ExpirySweeper.stop();
-            MuteState.clear();
-        });
+    public static void serverStopping(MinecraftServer server) {
+        ExpirySweeper.stop();
+        MuteState.clear();
     }
 }
