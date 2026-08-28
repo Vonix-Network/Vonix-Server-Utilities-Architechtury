@@ -1,36 +1,83 @@
 package network.vonix.serverutilities.neoforge;
 
-import dev.architectury.event.EventResult;
-import dev.architectury.event.events.common.CommandRegistrationEvent;
-import dev.architectury.event.events.common.EntityEvent;
-import dev.architectury.event.events.common.LifecycleEvent;
-import dev.architectury.event.events.common.PlayerEvent;
-import dev.architectury.event.events.common.TickEvent;
+import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.server.ServerStartedEvent;
+import net.neoforged.neoforge.event.server.ServerStartingEvent;
+import net.neoforged.neoforge.event.server.ServerStoppedEvent;
+import net.neoforged.neoforge.event.server.ServerStoppingEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import network.vonix.serverutilities.inventory.neoforge.AccessoryHelperImpl;
 import network.vonix.serverutilities.platform.PlatformEvents;
 
 import java.nio.file.Path;
 
 public final class VsuPlatformEvents implements PlatformEvents {
+    private Callbacks callbacks;
+
     @Override
-    public void register(Callbacks c) {
-        CommandRegistrationEvent.EVENT.register((dispatcher, ignoredAccess, ignoredEnvironment) -> c.commands().accept(dispatcher));
-        LifecycleEvent.SERVER_STARTING.register(server -> c.serverStarting().accept(server));
-        LifecycleEvent.SERVER_STARTED.register(server -> c.serverStarted().accept(server));
-        LifecycleEvent.SERVER_STOPPING.register(server -> c.serverStopping().accept(server));
-        LifecycleEvent.SERVER_STOPPED.register(server -> c.serverStopped().accept(server));
-        TickEvent.SERVER_POST.register(server -> c.serverTick().accept(server));
-        PlayerEvent.PLAYER_JOIN.register(player -> c.playerJoin().accept(player));
-        PlayerEvent.PLAYER_QUIT.register(player -> c.playerQuit().accept(player));
-        EntityEvent.LIVING_DEATH.register((entity, source) -> {
-            c.livingDeath().accept(entity, source);
-            return EventResult.pass();
-        });
+    public void register(Callbacks callbacks) {
+        this.callbacks = callbacks;
+        NeoForge.EVENT_BUS.register(this);
+    }
+
+    @SubscribeEvent
+    public void onRegisterCommands(RegisterCommandsEvent event) {
+        callbacks.commands().accept(event.getDispatcher());
+    }
+
+    @SubscribeEvent
+    public void onServerStarting(ServerStartingEvent event) {
+        callbacks.serverStarting().accept(event.getServer());
+    }
+
+    @SubscribeEvent
+    public void onServerStarted(ServerStartedEvent event) {
+        callbacks.serverStarted().accept(event.getServer());
+    }
+
+    @SubscribeEvent
+    public void onServerStopping(ServerStoppingEvent event) {
+        callbacks.serverStopping().accept(event.getServer());
+    }
+
+    @SubscribeEvent
+    public void onServerStopped(ServerStoppedEvent event) {
+        callbacks.serverStopped().accept(event.getServer());
+    }
+
+    @SubscribeEvent
+    public void onServerTick(ServerTickEvent.Post event) {
+        callbacks.serverTick().accept(event.getServer());
+    }
+
+    @SubscribeEvent
+    public void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+            callbacks.playerJoin().accept(player);
+        }
+    }
+
+    @SubscribeEvent
+    public void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+            callbacks.playerQuit().accept(player);
+        }
+    }
+
+    @SubscribeEvent
+    public void onLivingDeath(LivingDeathEvent event) {
+        callbacks.livingDeath().accept(event.getEntity(), event.getSource());
     }
 
     @Override
     public Path configDirectory() {
-        return dev.architectury.platform.Platform.getConfigFolder();
+        return net.neoforged.fml.loading.FMLPaths.CONFIGDIR.get();
     }
 
     @Override
@@ -49,6 +96,6 @@ public final class VsuPlatformEvents implements PlatformEvents {
 
     @Override
     public void openAccessoryMenu(ServerPlayer target, ServerPlayer viewer) {
-        network.vonix.serverutilities.inventory.neoforge.AccessoryHelperImpl.openAccessoryMenu(target, viewer);
+        AccessoryHelperImpl.openAccessoryMenu(target, viewer);
     }
 }
