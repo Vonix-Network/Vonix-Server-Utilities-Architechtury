@@ -18,11 +18,11 @@ The root `core/` module contains platform-neutral code and tests. Each target di
 
 ## Release status
 
-- GitHub release automation: `.github/workflows/release.yml` runs the nine-lane build matrix on `v*` tags and attaches the resulting jars plus `SHA256SUMS` to a stable release; it does not deploy or activate a server.
+- GitHub release automation: `.github/workflows/release.yml` runs the nine-lane build matrix on `v*` tags and attaches the resulting jars plus `SHA256SUMS` to a stable release.
 - Embedded project version: **`2.0.0`** for every supported lane.
-- CI gate: the tag-triggered workflow must provide fresh build/package evidence for this versioned successor; earlier R14 evidence does not cover the metadata/workflow changes.
-- Live Minecraft activation, deployment, server restart, and production database access were **not performed** for this source snapshot.
-- Do not install the 26.1.2 artifact on an unrelated server without matching the required NeoForge and Java 25 environment.
+- Release validation: the tag-triggered workflow builds and packages all nine lanes and publishes SHA-256 checksums with each tagged release.
+- Installation: choose the artifact matching your Minecraft version, loader, and Java environment, then follow the installation steps in the main README.
+- The 26.1.2 artifact requires the matching NeoForge and Java 25 environment.
 
 ## Building
 
