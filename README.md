@@ -2,9 +2,9 @@
 
 A server-side essentials mod for Minecraft — homes, warps, kits, teleport, social, admin tooling, moderation, and Venary site integration — built on **Architectury** for **Forge, NeoForge, and Fabric** across the supported Minecraft target versions.
 
-**Current version:** 1.7.1 · See [CHANGELOG.md](CHANGELOG.md) · License: All Rights Reserved (Vonix Network)
+**Current embedded mod version:** 1.7.1 · **Common repository line:** `2.0.0-common.1` (prerelease) · See [CHANGELOG.md](CHANGELOG.md) · License: All Rights Reserved (Vonix Network)
 
-An untagged Minecraft **26.1.2 / NeoForge 26.1.2.93** candidate is also present under `vonix_server_utils-26.1.2-neoforge-template/`; it is not included in the immutable `v1.7.1` release.
+The Minecraft **26.1.2 / NeoForge 26.1.2.93** lane is included in the `2.0.0-common.1` source snapshot under `vonix_server_utils-26.1.2-neoforge-template/`. Its artifact retains the target-specific `1.7.1-26.1.2.93-candidate` embedded version; the common label does not rewrite project SemVer.
 
 ---
 
@@ -62,6 +62,7 @@ Full command reference: **[docs/COMMANDS.md](docs/COMMANDS.md)**.
 - **[docs/COMMANDS.md](docs/COMMANDS.md)** — every command, usage, permission node, op-fallback, example.
 - **[docs/PERMISSIONS.md](docs/PERMISSIONS.md)** — full `vsu.*` permission tree and LuckPerms group recipes.
 - **[docs/MODERATION.md](docs/MODERATION.md)** — duration syntax, escalation, audit, bypass nodes, restoring a wrongful ban.
+- **[docs/COMMON-V2-REPOSITORY.md](docs/COMMON-V2-REPOSITORY.md)** — the `2.0.0-common.1` five-lane repository layout, release boundary, and build expectations.
 - **[docs/GAP-ANALYSIS-v1.6.0.md](docs/GAP-ANALYSIS-v1.6.0.md)** — v1.6.0 scope vs. industry essentials baselines.
 - **[docs/V1.6.0-SPEC.md](docs/V1.6.0-SPEC.md)** — authoritative implementation spec for the v1.6.0 release.
 - **[CHANGELOG.md](CHANGELOG.md)** — release history (Keep-a-Changelog format).
