@@ -15,6 +15,7 @@ import network.vonix.serverutilities.VonixServerUtilities;
 import network.vonix.serverutilities.admin.AdminManager;
 import network.vonix.serverutilities.config.ModConfig;
 import network.vonix.serverutilities.features.PermissionGate;
+import network.vonix.serverutilities.platform.PlatformEvents;
 import network.vonix.serverutilities.homes.HomeManager;
 import network.vonix.serverutilities.kits.KitManager;
 import network.vonix.serverutilities.teleport.TeleportManager;
@@ -603,7 +604,7 @@ public final class ModCommands {
         ctx.getSource().sendSuccess(
                 () -> Component.literal("§6[VSU] §fVersion: §e" + VonixServerUtilities.VERSION), false);
         ctx.getSource().sendSuccess(
-                () -> Component.literal("§7Platform: Architectury 1.21.1"), false);
+                () -> Component.literal("§7Platform: " + PlatformEvents.Holder.get().platformDisplay()), false);
         return 1;
     }
 

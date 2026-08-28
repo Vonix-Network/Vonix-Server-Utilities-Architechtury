@@ -63,6 +63,11 @@ processResources {
 }
 
 sourceSets {
+    main {
+        java {
+            srcDir "../core/src/main/java"
+        }
+    }
     test {
         java.srcDir "src/test/java"
     }

@@ -3,8 +3,6 @@ package network.vonix.serverutilities.features;
 import com.google.gson.JsonObject;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import network.vonix.serverutilities.VonixServerUtilities;
 import network.vonix.serverutilities.venary.VenaryClient;
 import network.vonix.serverutilities.donation_ranks.RankGroupSyncer;
@@ -47,15 +45,12 @@ public final class ServerConfigClient {
         VonixServerUtilities.LOGGER.info("[VonixSU] Feature-flag poller registered (every {}s).", POLL_INTERVAL_SECONDS);
     }
 
-    @SubscribeEvent
-    public static void onServerTick(ServerTickEvent.Post event) { if (registered) onTick(event.getServer()); }
-
     /** Forces the next tick to issue a fetch, regardless of interval. */
     public static void requestImmediateFetch() {
         forceFetch = true;
     }
 
-    private static void onTick(MinecraftServer server) {
+    public static void onTick(MinecraftServer server) {
         VenaryClient client = VenaryClient.get();
         if (client == null) return;
         if (!client.getConfig().isEnabled()) return;

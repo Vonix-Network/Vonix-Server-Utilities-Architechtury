@@ -603,7 +603,7 @@ public final class ModCommands {
         ctx.getSource().sendSuccess(
                 () -> Component.literal("§6[VSU] §fVersion: §e" + VonixServerUtilities.VERSION), false);
         ctx.getSource().sendSuccess(
-                () -> Component.literal("§7Platform: NeoForge 26.1.2.93"), false);
+                () -> Component.literal("§7Platform: NeoForge 26.1.2"), false);
         return 1;
     }
 

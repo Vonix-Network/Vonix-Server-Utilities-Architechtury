@@ -15,6 +15,7 @@ import java.util.function.Consumer;
 public interface PlatformEvents {
     void register(Callbacks callbacks);
     Path configDirectory();
+    String platformDisplay();
     boolean easyNpcInstalled();
     void registerEasyNpcInteraction();
     void openAccessoryMenu(ServerPlayer target, ServerPlayer viewer);

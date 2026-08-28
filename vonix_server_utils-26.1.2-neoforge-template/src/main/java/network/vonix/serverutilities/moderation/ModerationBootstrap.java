@@ -1,36 +1,29 @@
 package network.vonix.serverutilities.moderation;
 
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.event.RegisterCommandsEvent;
-import net.neoforged.neoforge.event.server.ServerStartedEvent;
-import net.neoforged.neoforge.event.server.ServerStoppingEvent;
+import com.mojang.brigadier.CommandDispatcher;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.server.MinecraftServer;
 import network.vonix.serverutilities.VonixServerUtilities;
 
-/** Wires the moderation subsystem into NeoForge's game event bus. */
+/** Shared moderation lifecycle behavior; the native EventHandler provides event delivery. */
 public final class ModerationBootstrap {
-    private static boolean wired = false;
+    private static boolean wired;
     private ModerationBootstrap() {}
 
-    public static synchronized void init() {
-        if (wired) return;
-        wired = true;
-        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(ModerationBootstrap.class);
+    public static synchronized void init() { wired = true; }
+
+    public static void registerCommands(CommandDispatcher<CommandSourceStack> dispatcher) {
+        if (!wired) init();
+        ModerationCommands.register(dispatcher);
+        VonixServerUtilities.LOGGER.info("[VSU/mod] Moderation commands registered.");
     }
 
-    @SubscribeEvent
-    public static void commands(RegisterCommandsEvent event) {
-        ModerationCommands.register(event.getDispatcher());
-        VonixServerUtilities.LOGGER.info("[VonixSU/mod] Moderation commands registered.");
-    }
-
-    @SubscribeEvent
-    public static void started(ServerStartedEvent event) {
+    public static void serverStarted(MinecraftServer server) {
         VonixServerUtilities.dbAsync(MuteState::hydrateFromDb);
-        ExpirySweeper.start(event.getServer());
+        ExpirySweeper.start(server);
     }
 
-    @SubscribeEvent
-    public static void stopping(ServerStoppingEvent event) {
+    public static void serverStopping(MinecraftServer server) {
         ExpirySweeper.stop();
         MuteState.clear();
     }

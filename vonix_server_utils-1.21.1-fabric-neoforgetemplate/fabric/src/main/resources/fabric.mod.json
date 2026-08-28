@@ -3,14 +3,14 @@
   "id": "vonix_server_utilities",
   "version": "${version}",
   "name": "Vonix Server Utilities",
-  "description": "Server-side utility mod: homes, warps, kits, TPA, teleport, admin tools, and world commands.",
+  "description": "Full-featured server utility mod: homes, warps, kits, TPA, teleport, admin tools, world commands, moderation, and Venary integration.",
   "authors": [
     "Vonix Network"
   ],
   "contact": {
     "sources": "https://github.com/Vonix-Network/ServerUtilities"
   },
-  "license": "All Rights Reserved",
+  "license": "MIT",
   "environment": "server",
   "entrypoints": {
     "main": [
@@ -24,7 +24,6 @@
     "fabricloader": ">=0.16.0",
     "minecraft": "~1.21.1",
     "java": ">=21",
-    "architectury": ">=13.0.8",
     "fabric-api": "*"
   },
   "suggests": {

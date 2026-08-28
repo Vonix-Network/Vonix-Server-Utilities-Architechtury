@@ -2,8 +2,6 @@ package network.vonix.serverutilities.venary;
 
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import network.vonix.serverutilities.VonixServerUtilities;
 
 import java.util.HashMap;
@@ -41,9 +39,6 @@ public final class PlayerSyncTask {
 
     public static void register() {}
 
-    @SubscribeEvent
-    public static void onServerTick(ServerTickEvent.Post event) { onServerTick(event.getServer()); }
-
     /** Called from EventHandler player-join. */
     public static void onPlayerJoin(ServerPlayer player) {
         sessionStartTick.put(player.getUUID(), (long) player.level().getServer().getTickCount());
@@ -54,7 +49,7 @@ public final class PlayerSyncTask {
         sessionStartTick.remove(uuid);
     }
 
-    private static void onServerTick(MinecraftServer server) {
+    public static void onServerTick(MinecraftServer server) {
         VenaryClient client = VenaryClient.get();
         if (client == null) return;
         VenaryConfig cfg = client.getConfig();

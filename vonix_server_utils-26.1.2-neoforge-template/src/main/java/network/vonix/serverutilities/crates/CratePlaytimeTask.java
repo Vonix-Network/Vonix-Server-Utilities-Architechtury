@@ -3,8 +3,6 @@ package network.vonix.serverutilities.crates;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.stats.Stats;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import network.vonix.serverutilities.VonixServerUtilities;
 import network.vonix.serverutilities.config.ModConfig;
 
@@ -19,16 +17,16 @@ public final class CratePlaytimeTask {
     private static boolean registered;
     private CratePlaytimeTask() {}
     public static void register() { registered = true; }
-    @SubscribeEvent
-    public static void onServerTick(ServerTickEvent.Post event) { if (registered) onServerTick(event.getServer()); }
-    private static void onServerTick(MinecraftServer server) {
+    public static void onServerTick(MinecraftServer server) {
         if (++ticksSinceCheck < CHECK_INTERVAL_TICKS) return;
         ticksSinceCheck = 0;
         int minutes = ModConfig.INSTANCE.getPlaytimeKeyIntervalMinutes();
         if (minutes < 1) return;
-        long intervalTicks = minutes * 60L * 20L;
         List<Progress> snapshot = new ArrayList<>();
-        for (ServerPlayer player : server.getPlayerList().getPlayers()) snapshot.add(new Progress(player.getUUID(), player.getStats().getValue(Stats.CUSTOM, Stats.PLAY_TIME) / intervalTicks));
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            long ticks = player.getStats().getValue(Stats.CUSTOM, Stats.PLAY_TIME);
+            snapshot.add(new Progress(player.getUUID(), PlaytimeIntervals.completed(ticks, minutes)));
+        }
         if (snapshot.isEmpty()) return;
         VonixServerUtilities.dbAsync(() -> { CrateRepository repository = CrateRepository.getInstance(); for (Progress progress : snapshot) try { repository.grantPlaytimeIntervals(progress.uuid(), progress.completedIntervals()); } catch (Exception e) { VonixServerUtilities.LOGGER.error("[VSU] Could not grant playtime keys to {}", progress.uuid(), e); } });
     }

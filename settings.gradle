@@ -12,7 +12,30 @@ plugins {
 }
 
 rootProject.name = 'vonix_server_utilities-r3-pilot'
-include 'core', 'common', 'fabric', 'neoforge'
-project(':common').projectDir = file('vonix_server_utils-1.21.1-fabric-neoforgetemplate/common')
-project(':fabric').projectDir = file('vonix_server_utils-1.21.1-fabric-neoforgetemplate/fabric')
-project(':neoforge').projectDir = file('vonix_server_utils-1.21.1-fabric-neoforgetemplate/neoforge')
+
+// Native include graph for requested cells:
+//   core
+//   mc-1.21.1/{common,fabric,neoforge}
+//   mc-26.1.2/neoforge  (independent ModDevGradle build; not a subproject here)
+//
+// Historical Architectury project names :common/:fabric/:neoforge are kept
+// because 1.21.1 loader build.gradle files still resolve those paths.
+// Gradle cannot bind two project paths to the same projectDir.
+// 26.1.2 stays an independent Gradle 9.2 / Java 25 build so this 8.14
+// Architectury graph does not apply Loom to ModDevGradle sources.
+def buildProfile = providers.gradleProperty('buildProfile').getOrElse('all')
+include 'core'
+if (buildProfile != 'coreonly') {
+    include 'common', 'fabric', 'neoforge'
+    project(':common').projectDir = file('vonix_server_utils-1.21.1-fabric-neoforgetemplate/common')
+    project(':fabric').projectDir = file('vonix_server_utils-1.21.1-fabric-neoforgetemplate/fabric')
+    project(':neoforge').projectDir = file('vonix_server_utils-1.21.1-fabric-neoforgetemplate/neoforge')
+}
+
+gradle.ext.nativeIncludeGraph = [
+    'core'                 : [dir: 'core', gradlePath: ':core', includedInRoot: true],
+    'mc-1.21.1:common'     : [dir: 'vonix_server_utils-1.21.1-fabric-neoforgetemplate/common', gradlePath: ':common', includedInRoot: true],
+    'mc-1.21.1:fabric'     : [dir: 'vonix_server_utils-1.21.1-fabric-neoforgetemplate/fabric', gradlePath: ':fabric', includedInRoot: true],
+    'mc-1.21.1:neoforge'   : [dir: 'vonix_server_utils-1.21.1-fabric-neoforgetemplate/neoforge', gradlePath: ':neoforge', includedInRoot: true],
+    'mc-26.1.2:neoforge'   : [dir: 'vonix_server_utils-26.1.2-neoforge-template', gradlePath: '', includedInRoot: false],
+]

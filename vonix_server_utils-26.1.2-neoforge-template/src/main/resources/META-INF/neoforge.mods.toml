@@ -1,4 +1,4 @@
-license = "All Rights Reserved"
+license = "MIT"
 modLoader = "javafml"
 loaderVersion = "[11,)"
 
