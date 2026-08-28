@@ -16,3 +16,5 @@ rootProject.name = 'vonix_server_utilities'
 include 'common'
 include 'fabric'
 include 'neoforge'
+include 'core'
+project(':core').projectDir = file('../core')
