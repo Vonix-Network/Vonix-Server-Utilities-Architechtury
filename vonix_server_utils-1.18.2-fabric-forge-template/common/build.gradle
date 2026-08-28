@@ -4,7 +4,7 @@ architectury {
 
 dependencies {
     compileOnly 'org.xerial:sqlite-jdbc:3.45.1.0'
-    testImplementation 'org.xerial:sqlite-jdbc:3.45.1.0'
+    testRuntimeOnly('org.xerial:sqlite-jdbc:3.45.1.0') { transitive = false }
     // We depend on Fabric Loader here to use the Fabric @Environment annotations,
     // which get remapped to the correct annotations on each platform.
     // Do NOT use other classes from Fabric Loader.
