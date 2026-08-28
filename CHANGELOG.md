@@ -17,7 +17,7 @@ Common-generation repository release. This prerelease starts the shared reposito
 
 ### Build
 - All supported lanes embed `2.0.0-common.1`; the 26.1.2 artifact is `vonix_server_utilities-2.0.0-common.1.jar`.
-- Static build/package/parity evidence passed for the accepted source snapshot. Live runtime activation and deployment were not performed.
+- The tag-triggered CI workflow is the source of build/package evidence for this release. Earlier R14 static evidence is not reused after the embedded version metadata change.
 
 ## [Unreleased]
 

@@ -26,7 +26,7 @@ The Minecraft **26.1.2 / NeoForge 26.1.2.93** lane is included in the `2.0.0-com
 | 1.19.2 | ✅ | — | ✅ | 17 |
 | 1.20.1 | ✅ | — | ✅ | 17 |
 | 1.21.1 | — | ✅ | ✅ | 21 |
-| 26.1.2 | — | ✅ candidate | — | 25 |
+| 26.1.2 | — | ✅ prerelease | — | 25 |
 
 Each established MC version lives in its own Architectury template directory (`vonix_server_utils-<mc>-...-template/`) with shared `common/` source and loader-specific `fabric/`, `forge/`, or `neoforge/` modules. The 26.1.2 target is intentionally a dedicated single-loader ModDevGradle project because NeoForge 26.1.x uses a different Java 25/toolchain architecture. Source parity across the established Architectury versions is maintained by the porting workflow (`port.py`).
 
@@ -113,7 +113,7 @@ VSU uses a separate Gradle project per MC version, all Architectury-based:
 - `vonix_server_utils-1.19.2-fabric-forge-template/` — MC 1.19.2, Java 17
 - `vonix_server_utils-1.20.1-fabric-forge-template/` — MC 1.20.1, Java 17
 - `vonix_server_utils-1.21.1-fabric-neoforgetemplate/` — MC 1.21.1, Java 21
-- `vonix_server_utils-26.1.2-neoforge-template/` — MC 26.1.2, NeoForge 26.1.2.93, Java 25 (candidate)
+- `vonix_server_utils-26.1.2-neoforge-template/` — MC 26.1.2, NeoForge 26.1.2.93, Java 25 (common-generation prerelease)
 
 Build a single target manually:
 
@@ -128,9 +128,9 @@ Or use the interactive multi-version build menu (auto-detects JDKs, writes logs 
 python build-menu.py
 ```
 
-JDK requirements: install JDK 17 (1.18.2/1.19.2/1.20.1) and JDK 21 (1.21.1) and point `JAVA_HOME` at the right one per target. The build menu handles JDK selection automatically.
+JDK requirements: install JDK 17 (1.18.2/1.19.2/1.20.1), JDK 21 (1.21.1), and JDK 25 (26.1.2). The build menu handles JDK selection automatically when the required installations are available.
 
-The 26.1.2 candidate requires JDK 25 and is built from its standalone template with `./gradlew --no-daemon clean build`.
+The 26.1.2 common-generation prerelease requires JDK 25 and is built from its standalone template with `./gradlew --no-daemon clean build`. The tag-triggered GitHub Actions workflow builds all nine release lanes and attaches the artifacts to the GitHub prerelease.
 
 ---
 
