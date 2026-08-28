@@ -2,9 +2,9 @@
 
 A server-side essentials mod for Minecraft — homes, warps, kits, teleport, social, admin tooling, moderation, and Venary site integration — built on **Architectury** for **Forge, NeoForge, and Fabric** across the supported Minecraft target versions.
 
-**Current embedded mod version:** `2.0.0-common.1` (prerelease) · **Common repository line:** `2.0.0` · See [CHANGELOG.md](CHANGELOG.md) · License: All Rights Reserved (Vonix Network)
+**Current embedded mod version:** `2.0.0` (stable release) · **Common repository line:** `2.0.0` · See [CHANGELOG.md](CHANGELOG.md) · License: All Rights Reserved (Vonix Network)
 
-The Minecraft **26.1.2 / NeoForge 26.1.2.93** lane is included in the `2.0.0-common.1` prerelease under `vonix_server_utils-26.1.2-neoforge-template/`. Its artifact uses the same exact embedded release version as the other lanes.
+The Minecraft **26.1.2 / NeoForge 26.1.2.93** lane is included in the `2.0.0` stable release under `vonix_server_utils-26.1.2-neoforge-template/`. Its artifact uses the same exact embedded release version as the other lanes.
 
 ---
 
@@ -26,7 +26,7 @@ The Minecraft **26.1.2 / NeoForge 26.1.2.93** lane is included in the `2.0.0-com
 | 1.19.2 | ✅ | — | ✅ | 17 |
 | 1.20.1 | ✅ | — | ✅ | 17 |
 | 1.21.1 | — | ✅ | ✅ | 21 |
-| 26.1.2 | — | ✅ prerelease | — | 25 |
+| 26.1.2 | — | ✅ stable release | — | 25 |
 
 Each established MC version lives in its own Architectury template directory (`vonix_server_utils-<mc>-...-template/`) with shared `common/` source and loader-specific `fabric/`, `forge/`, or `neoforge/` modules. The 26.1.2 target is intentionally a dedicated single-loader ModDevGradle project because NeoForge 26.1.x uses a different Java 25/toolchain architecture. Source parity across the established Architectury versions is maintained by the porting workflow (`port.py`).
 
@@ -62,7 +62,7 @@ Full command reference: **[docs/COMMANDS.md](docs/COMMANDS.md)**.
 - **[docs/COMMANDS.md](docs/COMMANDS.md)** — every command, usage, permission node, op-fallback, example.
 - **[docs/PERMISSIONS.md](docs/PERMISSIONS.md)** — full `vsu.*` permission tree and LuckPerms group recipes.
 - **[docs/MODERATION.md](docs/MODERATION.md)** — duration syntax, escalation, audit, bypass nodes, restoring a wrongful ban.
-- **[docs/COMMON-V2-REPOSITORY.md](docs/COMMON-V2-REPOSITORY.md)** — the `2.0.0-common.1` five-lane repository layout, release boundary, and build expectations.
+- **[docs/COMMON-V2-REPOSITORY.md](docs/COMMON-V2-REPOSITORY.md)** — the `2.0.0` five-lane repository layout, release boundary, and build expectations.
 - **[docs/GAP-ANALYSIS-v1.6.0.md](docs/GAP-ANALYSIS-v1.6.0.md)** — v1.6.0 scope vs. industry essentials baselines.
 - **[docs/V1.6.0-SPEC.md](docs/V1.6.0-SPEC.md)** — authoritative implementation spec for the v1.6.0 release.
 - **[CHANGELOG.md](CHANGELOG.md)** — release history (Keep-a-Changelog format).
@@ -113,7 +113,7 @@ VSU uses a separate Gradle project per MC version, all Architectury-based:
 - `vonix_server_utils-1.19.2-fabric-forge-template/` — MC 1.19.2, Java 17
 - `vonix_server_utils-1.20.1-fabric-forge-template/` — MC 1.20.1, Java 17
 - `vonix_server_utils-1.21.1-fabric-neoforgetemplate/` — MC 1.21.1, Java 21
-- `vonix_server_utils-26.1.2-neoforge-template/` — MC 26.1.2, NeoForge 26.1.2.93, Java 25 (common-generation prerelease)
+- `vonix_server_utils-26.1.2-neoforge-template/` — MC 26.1.2, NeoForge 26.1.2.93, Java 25 (common-generation stable release)
 
 Build a single target manually:
 
@@ -130,7 +130,7 @@ python build-menu.py
 
 JDK requirements: install JDK 17 (1.18.2/1.19.2/1.20.1), JDK 21 (1.21.1), and JDK 25 (26.1.2). The build menu handles JDK selection automatically when the required installations are available.
 
-The 26.1.2 common-generation prerelease requires JDK 25 and is built from its standalone template with `./gradlew --no-daemon clean build`. The tag-triggered GitHub Actions workflow builds all nine release lanes and attaches the artifacts to the GitHub prerelease.
+The 26.1.2 common-generation stable release requires JDK 25 and is built from its standalone template with `./gradlew --no-daemon clean build`. The tag-triggered GitHub Actions workflow builds all nine release lanes and attaches the artifacts to the GitHub stable release.
 
 ---
 

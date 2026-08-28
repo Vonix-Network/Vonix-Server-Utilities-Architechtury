@@ -89,7 +89,7 @@ jobs:
           {
             echo "## Vonix Server Utilities ${GITHUB_REF_NAME}"
             echo
-            echo "Common-generation prerelease beginning at 2.0.0. All nine supported Minecraft/loader lanes are built by GitHub Actions from this tag."
+            echo "Common-generation stable release 2.0.0. All nine supported Minecraft/loader lanes are built by GitHub Actions from this tag."
             echo
             echo "### Artifact matrix"
             echo
@@ -108,4 +108,4 @@ jobs:
             release/*.jar
             release/SHA256SUMS
           draft: false
-          prerelease: true
+          prerelease: false

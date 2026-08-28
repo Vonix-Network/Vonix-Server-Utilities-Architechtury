@@ -1,3 +1,49 @@
 package network.vonix.serverutilities.forge;
-import dev.architectury.event.EventResult; import dev.architectury.event.events.common.*; import net.minecraft.server.level.ServerPlayer; import network.vonix.serverutilities.platform.PlatformEvents; import java.nio.file.Path;
-public final class VsuPlatformEvents implements PlatformEvents { public void register(Callbacks c){CommandRegistrationEvent.EVENT.register((d,s)->c.commands().accept(d));LifecycleEvent.SERVER_STARTING.register(c.serverStarting());LifecycleEvent.SERVER_STARTED.register(c.serverStarted());LifecycleEvent.SERVER_STOPPING.register(c.serverStopping());LifecycleEvent.SERVER_STOPPED.register(c.serverStopped());TickEvent.SERVER_POST.register(c.serverTick());PlayerEvent.PLAYER_JOIN.register(c.playerJoin());PlayerEvent.PLAYER_QUIT.register(c.playerQuit());EntityEvent.LIVING_DEATH.register((e,s)->{c.livingDeath().accept(e,s);return EventResult.pass();});} public Path configDirectory(){return dev.architectury.platform.Platform.getConfigFolder();} public boolean easyNpcInstalled(){return false;} public void registerEasyNpcInteraction(){} public void openAccessoryMenu(ServerPlayer t,ServerPlayer v){network.vonix.serverutilities.inventory.forge.AccessoryHelperImpl.openAccessoryMenu(t,v);} }
+
+import dev.architectury.event.EventResult;
+import dev.architectury.event.events.common.CommandRegistrationEvent;
+import dev.architectury.event.events.common.EntityEvent;
+import dev.architectury.event.events.common.LifecycleEvent;
+import dev.architectury.event.events.common.PlayerEvent;
+import dev.architectury.event.events.common.TickEvent;
+import net.minecraft.server.level.ServerPlayer;
+import network.vonix.serverutilities.platform.PlatformEvents;
+
+import java.nio.file.Path;
+
+public final class VsuPlatformEvents implements PlatformEvents {
+    @Override
+    public void register(Callbacks c) {
+        CommandRegistrationEvent.EVENT.register((dispatcher, ignored) -> c.commands().accept(dispatcher));
+        LifecycleEvent.SERVER_STARTING.register(server -> c.serverStarting().accept(server));
+        LifecycleEvent.SERVER_STARTED.register(server -> c.serverStarted().accept(server));
+        LifecycleEvent.SERVER_STOPPING.register(server -> c.serverStopping().accept(server));
+        LifecycleEvent.SERVER_STOPPED.register(server -> c.serverStopped().accept(server));
+        TickEvent.SERVER_POST.register(server -> c.serverTick().accept(server));
+        PlayerEvent.PLAYER_JOIN.register(player -> c.playerJoin().accept(player));
+        PlayerEvent.PLAYER_QUIT.register(player -> c.playerQuit().accept(player));
+        EntityEvent.LIVING_DEATH.register((entity, source) -> {
+            c.livingDeath().accept(entity, source);
+            return EventResult.pass();
+        });
+    }
+
+    @Override
+    public Path configDirectory() {
+        return dev.architectury.platform.Platform.getConfigFolder();
+    }
+
+    @Override
+    public boolean easyNpcInstalled() {
+        return false;
+    }
+
+    @Override
+    public void registerEasyNpcInteraction() {
+    }
+
+    @Override
+    public void openAccessoryMenu(ServerPlayer target, ServerPlayer viewer) {
+        network.vonix.serverutilities.inventory.forge.AccessoryHelperImpl.openAccessoryMenu(target, viewer);
+    }
+}

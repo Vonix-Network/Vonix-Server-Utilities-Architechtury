@@ -22,10 +22,10 @@ class PublicIdentityTest {
                 || common.contains("MOD_ID = \"vonix_server_utilities\""));
         assertTrue(neo2612.contains("MOD_ID  = \"vonix_server_utilities\"")
                 || neo2612.contains("MOD_ID = \"vonix_server_utilities\""));
-        assertTrue(common.contains("VERSION = \"2.0.0-common.1\""));
-        assertTrue(neo2612.contains("VERSION = \"2.0.0-common.1\""));
-        assertFalse(neo2612.contains("2.0.0-common.1-26.1.2.93-candidate"),
-                "public VERSION must stay 2.0.0-common.1; target suffix belongs on neither the artifact nor /vonixsu version");
+        assertTrue(common.contains("VERSION = \"2.0.0\""));
+        assertTrue(neo2612.contains("VERSION = \"2.0.0\""));
+        assertFalse(neo2612.contains("2.0.0-26.1.2.93-candidate"),
+                "public VERSION must stay 2.0.0; target suffix belongs on neither the artifact nor /vonixsu version");
     }
 
     @Test

@@ -1,8 +1,8 @@
 # VSU 2.0.0 common-generation repository
 
-This repository is the single source tree for the Vonix Server Utilities common-generation line. The common line starts at **2.0.0** and is published as the prerelease label **`2.0.0-common.1`**.
+This repository is the single source tree for the Vonix Server Utilities common-generation line. The common line starts at **2.0.0** and is published as the release label **`2.0.0`**.
 
-`2.0.0-common.1` is the embedded prerelease version for every supported lane and identifies the first common-generation release line beginning at `2.0.0`. Existing historical releases remain immutable.
+`2.0.0` is the embedded stable release version for every supported lane and identifies the first common-generation release line beginning at `2.0.0`. Existing historical releases remain immutable.
 
 ## One repository, all supported Minecraft lanes
 
@@ -18,8 +18,8 @@ The root `core/` module contains platform-neutral code and tests. Each target di
 
 ## Release status
 
-- GitHub release automation: `.github/workflows/release.yml` runs the nine-lane build matrix on `v*` tags and attaches the resulting jars plus `SHA256SUMS` to a prerelease; it does not deploy or activate a server.
-- Embedded project version: **`2.0.0-common.1`** for every supported lane.
+- GitHub release automation: `.github/workflows/release.yml` runs the nine-lane build matrix on `v*` tags and attaches the resulting jars plus `SHA256SUMS` to a stable release; it does not deploy or activate a server.
+- Embedded project version: **`2.0.0`** for every supported lane.
 - CI gate: the tag-triggered workflow must provide fresh build/package evidence for this versioned successor; earlier R14 evidence does not cover the metadata/workflow changes.
 - Live Minecraft activation, deployment, server restart, and production database access were **not performed** for this source snapshot.
 - Do not install the 26.1.2 artifact on an unrelated server without matching the required NeoForge and Java 25 environment.
@@ -42,4 +42,4 @@ For the 26.1.2 target, use the standalone template, its Java 25 toolchain, and t
 
 ## Release naming
 
-The prerelease is a new common-generation release line. Historical `v1.7.1` artifacts and tags remain available as-is; this prerelease must not be described as a stable compatibility guarantee.
+The stable release is a new common-generation release line. Historical `v1.7.1` artifacts and tags remain available as-is. This source release does not by itself establish runtime compatibility guarantees; use the CI/runtime boundaries above.

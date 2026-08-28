@@ -5,9 +5,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.0.0-common.1] - 2026-08-28
+## [2.0.0] - 2026-08-28
 
-Common-generation repository release. This prerelease starts the shared repository/layout and embedded version line at `2.0.0` without rewriting historical release tags.
+Common-generation repository release. This release starts the shared repository/layout and embedded version line at `2.0.0` without rewriting historical release tags.
 
 ### Added
 - Added the Minecraft **26.1.2 / NeoForge 26.1.2.93** lane using ModDevGradle 2.0.140 and Java 25.
@@ -16,7 +16,7 @@ Common-generation repository release. This prerelease starts the shared reposito
 - Documented the five-lane, one-repository layout in `docs/COMMON-V2-REPOSITORY.md`.
 
 ### Build
-- All supported lanes embed `2.0.0-common.1`; the 26.1.2 artifact is `vonix_server_utilities-2.0.0-common.1.jar`.
+- All supported lanes embed `2.0.0`; the 26.1.2 artifact is `vonix_server_utilities-2.0.0.jar`.
 - The tag-triggered CI workflow is the source of build/package evidence for this release. Earlier R14 static evidence is not reused after the embedded version metadata change.
 - CI runs Loom under Java 21 for the 1.18.2–1.21.1 lanes and Java 25/Gradle 9.2.0 for 26.1.2.
 
