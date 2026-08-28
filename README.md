@@ -2,9 +2,9 @@
 
 A server-side essentials mod for Minecraft — homes, warps, kits, teleport, social, admin tooling, moderation, and Venary site integration — built on **Architectury** for **Forge, NeoForge, and Fabric** across the supported Minecraft target versions.
 
-**Current embedded mod version:** `2.0.0` (stable release) · **Common repository line:** `2.0.0` · See [CHANGELOG.md](CHANGELOG.md) · License: All Rights Reserved (Vonix Network)
+**Current embedded mod version:** `2.0.1` (stable release) · **Common repository line:** `2.0.1` · See [CHANGELOG.md](CHANGELOG.md) · License: All Rights Reserved (Vonix Network)
 
-The Minecraft **26.1.2 / NeoForge 26.1.2.93** lane is included in the `2.0.0` stable release under `vonix_server_utils-26.1.2-neoforge-template/`. Its artifact uses the same exact embedded release version as the other lanes.
+The Minecraft **26.1.2 / NeoForge 26.1.2.93** lane is included in the `2.0.1` stable release under `vonix_server_utils-26.1.2-neoforge-template/`. Its artifact uses the same exact embedded release version as the other lanes.
 
 ---
 
@@ -49,7 +49,7 @@ VSU is server-side only. Clients do not need it installed.
 |---|---|
 | `/sethome base` then `/home base` | Save and teleport to a personal home (limit configurable, default 5). |
 | `/tpa <player>` → `/tpaccept` | Request a teleport to another player. |
-| `/spawn`, `/back` | Go to spawn, or undo your last teleport / death. |
+| `/spawn`, `/back`, `/backdeath` | Go to spawn, undo your last normal teleport, or return to your last death position. |
 | `/warp <name>` (`/setwarp` is op) | Travel to a server-defined location. |
 | `/tempban Steve 7d griefing` | Issue a 7-day ban with reason. See [docs/MODERATION.md](docs/MODERATION.md). |
 
@@ -62,7 +62,7 @@ Full command reference: **[docs/COMMANDS.md](docs/COMMANDS.md)**.
 - **[docs/COMMANDS.md](docs/COMMANDS.md)** — every command, usage, permission node, op-fallback, example.
 - **[docs/PERMISSIONS.md](docs/PERMISSIONS.md)** — full `vsu.*` permission tree and LuckPerms group recipes.
 - **[docs/MODERATION.md](docs/MODERATION.md)** — duration syntax, escalation, audit, bypass nodes, restoring a wrongful ban.
-- **[docs/COMMON-V2-REPOSITORY.md](docs/COMMON-V2-REPOSITORY.md)** — the `2.0.0` five-lane repository layout, release boundary, and build expectations.
+- **[docs/COMMON-V2-REPOSITORY.md](docs/COMMON-V2-REPOSITORY.md)** — the VSU 2.x multi-lane repository layout, release boundary, and build expectations.
 - **[docs/GAP-ANALYSIS-v1.6.0.md](docs/GAP-ANALYSIS-v1.6.0.md)** — v1.6.0 scope vs. industry essentials baselines.
 - **[docs/V1.6.0-SPEC.md](docs/V1.6.0-SPEC.md)** — authoritative implementation spec for the v1.6.0 release.
 - **[CHANGELOG.md](CHANGELOG.md)** — release history (Keep-a-Changelog format).
@@ -101,7 +101,7 @@ death_back_delay_seconds=0
 
 Subsystems can be toggled at runtime with `/feature enable|disable|list|reload|status <key>` — every feature category is gated by a `FeatureGate` key, so admins can disable moderation, Venary, or any feature group without uninstalling the mod.
 
-Database: `config/vonix_server_utilities/data.db` (SQLite, WAL mode). VonixCore databases are auto-migrated on first launch.
+Database: `config/vonix_server_utilities/data.db` (SQLite, WAL mode). Existing VSU databases are reused in place; retained VSU snapshots and VonixCore databases can be imported safely on first launch when present.
 
 ---
 
