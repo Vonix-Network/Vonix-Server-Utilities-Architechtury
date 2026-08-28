@@ -4,6 +4,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.sql.Statement;
 
 /** Regression test for retained VSU database recovery and separate back/death rows. */
@@ -34,6 +35,21 @@ public final class VsuLegacyMigrationTest {
             require(second.backLocationsInserted() == 0, "rerun duplicated back rows");
         }
         require(before.equals(VsuLegacyMigration.fingerprint(source)), "source file changed");
+
+        Path lookalike = root.resolve("lookalike.db");
+        createLookalike(lookalike);
+        try (Connection dest = open(destination)) {
+            boolean rejected = false;
+            try {
+                VsuLegacyMigration.importInto(dest, lookalike,
+                        VsuLegacyMigration.fingerprint(lookalike));
+            } catch (SQLException expected) {
+                rejected = true;
+            }
+            require(rejected, "lookalike schema was accepted");
+            require(count(dest, "vsu_homes") == 2, "lookalike changed destination homes");
+            require(count(dest, "vsu_back_locations") == 2, "lookalike changed destination back rows");
+        }
         System.out.println("VsuLegacyMigrationTest: PASS");
     }
 
@@ -52,6 +68,12 @@ public final class VsuLegacyMigrationTest {
         try (Connection connection = open(path); Statement statement = connection.createStatement()) {
             statement.execute("CREATE TABLE vsu_homes(uuid TEXT NOT NULL, name TEXT NOT NULL, world TEXT NOT NULL, x REAL NOT NULL, y REAL NOT NULL, z REAL NOT NULL, yaw REAL NOT NULL, pitch REAL NOT NULL, PRIMARY KEY(uuid,name))");
             statement.execute("CREATE TABLE vsu_back_locations(uuid TEXT NOT NULL, world TEXT NOT NULL, x REAL NOT NULL, y REAL NOT NULL, z REAL NOT NULL, yaw REAL NOT NULL, pitch REAL NOT NULL, kind TEXT NOT NULL, updated_at INTEGER NOT NULL, PRIMARY KEY(uuid,kind))");
+        }
+    }
+
+    private static void createLookalike(Path path) throws Exception {
+        try (Connection connection = open(path); Statement statement = connection.createStatement()) {
+            statement.execute("CREATE TABLE vsu_homes(uuid TEXT, name TEXT, world TEXT, x TEXT, y REAL, z REAL, yaw REAL, pitch REAL)");
         }
     }
 

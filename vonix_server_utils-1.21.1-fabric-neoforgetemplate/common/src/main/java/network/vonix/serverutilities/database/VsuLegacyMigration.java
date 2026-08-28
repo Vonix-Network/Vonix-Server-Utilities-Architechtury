@@ -15,7 +15,10 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -176,19 +179,65 @@ public final class VsuLegacyMigration {
         }
     }
 
+    private record ColumnSpec(String type, boolean notNull, int primaryKeyPosition) {}
+
     private static void requireColumns(Connection connection, String table, String... required)
             throws SQLException {
-        Set<String> columns = new HashSet<>();
+        Map<String, ColumnSpec> actual = new HashMap<>();
         try (Statement statement = connection.createStatement();
-             ResultSet rs = statement.executeQuery("SELECT * FROM " + table + " LIMIT 0")) {
-            ResultSetMetaData metadata = rs.getMetaData();
-            for (int i = 1; i <= metadata.getColumnCount(); i++) {
-                columns.add(metadata.getColumnName(i).toLowerCase());
+             ResultSet rs = statement.executeQuery("PRAGMA table_info(\"" + table + "\")")) {
+            while (rs.next()) {
+                String name = rs.getString("name");
+                if (name == null) throw new SQLException("legacy VSU table " + table + " has unnamed column");
+                actual.put(name.toLowerCase(Locale.ROOT), new ColumnSpec(
+                        rs.getString("type") == null ? "" : rs.getString("type").trim().toUpperCase(Locale.ROOT),
+                        rs.getInt("notnull") != 0,
+                        rs.getInt("pk")));
             }
         }
+
+        Map<String, ColumnSpec> expected = new HashMap<>();
+        if ("vsu_homes".equals(table)) {
+            expected.put("uuid", new ColumnSpec("TEXT", true, 1));
+            expected.put("name", new ColumnSpec("TEXT", true, 2));
+            expected.put("world", new ColumnSpec("TEXT", true, 0));
+            expected.put("x", new ColumnSpec("REAL", true, 0));
+            expected.put("y", new ColumnSpec("REAL", true, 0));
+            expected.put("z", new ColumnSpec("REAL", true, 0));
+            expected.put("yaw", new ColumnSpec("REAL", true, 0));
+            expected.put("pitch", new ColumnSpec("REAL", true, 0));
+        } else if ("vsu_back_locations".equals(table)) {
+            expected.put("uuid", new ColumnSpec("TEXT", true, 1));
+            expected.put("world", new ColumnSpec("TEXT", true, 0));
+            expected.put("x", new ColumnSpec("REAL", true, 0));
+            expected.put("y", new ColumnSpec("REAL", true, 0));
+            expected.put("z", new ColumnSpec("REAL", true, 0));
+            expected.put("yaw", new ColumnSpec("REAL", true, 0));
+            expected.put("pitch", new ColumnSpec("REAL", true, 0));
+            expected.put("kind", new ColumnSpec("TEXT", true, 2));
+            expected.put("updated_at", new ColumnSpec("INTEGER", true, 0));
+        } else {
+            throw new SQLException("unsupported legacy VSU table " + table);
+        }
+
+        if (actual.size() != expected.size()) {
+            throw new SQLException("legacy VSU table " + table + " has unexpected column count");
+        }
         for (String column : required) {
-            if (!columns.contains(column)) {
-                throw new SQLException("legacy VSU table " + table + " is missing column " + column);
+            ColumnSpec observed = actual.get(column.toLowerCase(Locale.ROOT));
+            ColumnSpec wanted = expected.get(column.toLowerCase(Locale.ROOT));
+            if (observed == null || wanted == null) {
+                throw new SQLException("legacy VSU table " + table + " is missing required column " + column);
+            }
+            if (!wanted.type().equals(observed.type())
+                    || wanted.notNull() != observed.notNull()
+                    || wanted.primaryKeyPosition() != observed.primaryKeyPosition()) {
+                throw new SQLException("legacy VSU table " + table + " column " + column + " has incompatible definition");
+            }
+        }
+        for (Map.Entry<String, ColumnSpec> entry : expected.entrySet()) {
+            if (!actual.containsKey(entry.getKey())) {
+                throw new SQLException("legacy VSU table " + table + " is missing column " + entry.getKey());
             }
         }
     }
