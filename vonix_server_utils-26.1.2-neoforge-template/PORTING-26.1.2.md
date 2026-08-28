@@ -17,10 +17,10 @@ The build runs both executable regression probes through `check`:
 
 ## Candidate status
 
-The source candidate is complete for the requested 26.1.2 NeoForge lane. It has been compiled and packaged as:
+The `2.0.0-common.1` prerelease is complete for the requested 26.1.2 NeoForge lane. It has been compiled and packaged as:
 
 ```text
-build/libs/vonix_server_utilities-1.7.1-26.1.2.93-candidate.jar
+build/libs/vonix_server_utilities-2.0.0-common.1.jar
 ```
 
-The candidate is not published or deployed. Publication and production installation remain separate owner-authorized effects.
+The prerelease is not deployed or installed on a production server. Publication is a separate owner-authorized effect.

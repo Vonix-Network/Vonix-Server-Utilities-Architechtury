@@ -2,7 +2,7 @@
 
 This repository is the single source tree for the Vonix Server Utilities common-generation line. The common line starts at **2.0.0** and is published as the prerelease label **`2.0.0-common.1`**.
 
-`2.0.0-common.1` identifies the repository/layout generation. It does **not** rename the embedded mod version in the existing project lanes: the accepted source currently builds as VSU **1.7.1**, while the Minecraft 26.1.2 artifact retains its target-specific candidate suffix. Existing historical releases remain immutable.
+`2.0.0-common.1` is the embedded prerelease version for every supported lane and identifies the first common-generation release line beginning at `2.0.0`. Existing historical releases remain immutable.
 
 ## One repository, all supported Minecraft lanes
 
@@ -19,7 +19,7 @@ The root `core/` module contains platform-neutral code and tests. Each target di
 ## Release status
 
 - GitHub release label: **`2.0.0-common.1`** (prerelease).
-- Embedded project version: **1.7.1** for the established lanes.
+- Embedded project version: **`2.0.0-common.1`** for every supported lane.
 - Static evidence: the accepted candidate passed the parent build/package matrix and source/artifact parity checks for the requested lanes.
 - Live Minecraft activation, deployment, server restart, and production database access were **not performed** for this source snapshot.
 - Do not install the 26.1.2 artifact on an unrelated server without matching the required NeoForge and Java 25 environment.
@@ -42,4 +42,4 @@ For the 26.1.2 target, use the standalone template, its Java 25 toolchain, and t
 
 ## Release naming
 
-The common-generation label is kept separate from embedded project SemVer so historical `v1.7.1` artifacts and metadata remain truthful. A stable major-version bump requires a separate public API, configuration, persistence, network, and migration compatibility review; this prerelease must not be described as a stable replacement release.
+The prerelease is a new common-generation release line. Historical `v1.7.1` artifacts and tags remain available as-is; this prerelease must not be described as a stable compatibility guarantee.

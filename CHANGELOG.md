@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.0.0-common.1] - 2026-08-28
 
-Common-generation repository snapshot. This prerelease starts the shared repository/layout line at `2.0.0` without rewriting the embedded project version or historical release tags.
+Common-generation repository release. This prerelease starts the shared repository/layout and embedded version line at `2.0.0` without rewriting historical release tags.
 
 ### Added
 - Added the Minecraft **26.1.2 / NeoForge 26.1.2.93** lane using ModDevGradle 2.0.140 and Java 25.
@@ -16,7 +16,7 @@ Common-generation repository snapshot. This prerelease starts the shared reposit
 - Documented the five-lane, one-repository layout in `docs/COMMON-V2-REPOSITORY.md`.
 
 ### Build
-- The 26.1.2 artifact is `vonix_server_utilities-1.7.1-26.1.2.93-candidate.jar`; established lanes retain embedded version `1.7.1`.
+- All supported lanes embed `2.0.0-common.1`; the 26.1.2 artifact is `vonix_server_utilities-2.0.0-common.1.jar`.
 - Static build/package/parity evidence passed for the accepted source snapshot. Live runtime activation and deployment were not performed.
 
 ## [Unreleased]

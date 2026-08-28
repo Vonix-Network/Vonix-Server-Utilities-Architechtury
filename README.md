@@ -2,9 +2,9 @@
 
 A server-side essentials mod for Minecraft — homes, warps, kits, teleport, social, admin tooling, moderation, and Venary site integration — built on **Architectury** for **Forge, NeoForge, and Fabric** across the supported Minecraft target versions.
 
-**Current embedded mod version:** 1.7.1 · **Common repository line:** `2.0.0-common.1` (prerelease) · See [CHANGELOG.md](CHANGELOG.md) · License: All Rights Reserved (Vonix Network)
+**Current embedded mod version:** `2.0.0-common.1` (prerelease) · **Common repository line:** `2.0.0` · See [CHANGELOG.md](CHANGELOG.md) · License: All Rights Reserved (Vonix Network)
 
-The Minecraft **26.1.2 / NeoForge 26.1.2.93** lane is included in the `2.0.0-common.1` source snapshot under `vonix_server_utils-26.1.2-neoforge-template/`. Its artifact retains the target-specific `1.7.1-26.1.2.93-candidate` embedded version; the common label does not rewrite project SemVer.
+The Minecraft **26.1.2 / NeoForge 26.1.2.93** lane is included in the `2.0.0-common.1` prerelease under `vonix_server_utils-26.1.2-neoforge-template/`. Its artifact uses the same exact embedded release version as the other lanes.
 
 ---
 
