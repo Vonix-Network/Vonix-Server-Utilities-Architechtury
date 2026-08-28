@@ -3,8 +3,10 @@ package network.vonix.serverutilities.database;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.storage.LevelResource;
 import network.vonix.serverutilities.VonixServerUtilities;
+import network.vonix.serverutilities.database.VsuLegacyMigration;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.*;
 import java.sql.*;
 import java.util.ArrayList;
@@ -149,6 +151,112 @@ public final class Database {
     // ── Migration from VonixCore ──────────────────────────────────────────────
 
     private void attemptMigration(MinecraftServer server) {
+        attemptVonixCoreMigration(server);
+        attemptVsuRecovery();
+    }
+
+    private void attemptVsuRecovery() {
+        for (Path source : findLegacyVsuDatabases()) {
+            try {
+                String fingerprint = VsuLegacyMigration.fingerprint(source);
+                String markerKey = "vsu_vsu_recovery:" + fingerprint;
+                if (isMigrationComplete(markerKey)) {
+                    VonixServerUtilities.LOGGER.info("[VonixSU] VSU recovery source already imported: {}", source.getFileName());
+                    continue;
+                }
+                VsuLegacyMigration.ImportResult result =
+                        VsuLegacyMigration.importInto(connection, source, fingerprint);
+                if (!result.recognized()) {
+                    VonixServerUtilities.LOGGER.warn(
+                            "[VonixSU] Ignoring legacy candidate without VSU tables: {}", source);
+                    continue;
+                }
+                markMigration(markerKey,
+                        "complete;homes=" + result.homesInserted()
+                                + ";back_locations=" + result.backLocationsInserted());
+                VonixServerUtilities.LOGGER.info(
+                        "[VonixSU] Recovered {} homes and {} back locations from {}.",
+                        result.homesInserted(), result.backLocationsInserted(), source);
+            } catch (Exception e) {
+                VonixServerUtilities.LOGGER.warn(
+                        "[VonixSU] VSU recovery failed for {}; source left untouched and marker not set: {}",
+                        source, e.getMessage());
+            }
+        }
+    }
+
+    private List<Path> findLegacyVsuDatabases() {
+        List<Path> candidates = new ArrayList<>();
+        Path current = DB_PATH.toAbsolutePath().normalize();
+        Path parent = current.getParent();
+        if (parent == null) return candidates;
+
+        if (Files.isDirectory(parent)) {
+            try (DirectoryStream<Path> stream = Files.newDirectoryStream(parent, "data.db*")) {
+                for (Path path : stream) {
+                    String name = path.getFileName().toString();
+                    if (isRetainedVsuBackupName(name)) addLegacyCandidate(candidates, current, path);
+                }
+            } catch (IOException e) {
+                VonixServerUtilities.LOGGER.warn("[VonixSU] Could not scan VSU database directory: {}", e.getMessage());
+            }
+        }
+
+        Path configRoot = parent.getParent() == null ? parent : parent.getParent();
+        for (String directory : new String[]{
+                "vonix_server_utilities-legacy",
+                "vonix_server_utilities_backup",
+                "vonix_server_utilities.old"}) {
+            addLegacyCandidate(candidates, current, configRoot.resolve(directory).resolve("data.db"));
+        }
+        for (String file : new String[]{
+                "vonix_server_utilities.db",
+                "vonix_server_utilities.db.bak",
+                "vonix_server_utilities.db.old"}) {
+            addLegacyCandidate(candidates, current, configRoot.resolve(file));
+        }
+
+        candidates.sort((left, right) -> left.toString().compareTo(right.toString()));
+        return candidates;
+    }
+
+    private boolean isRetainedVsuBackupName(String name) {
+        return name.equals("data.db.bak")
+                || name.equals("data.db.old")
+                || name.equals("data.db.backup")
+                || name.startsWith("data.db.bak-")
+                || name.startsWith("data.db.old-")
+                || name.startsWith("data.db.backup-");
+    }
+
+    private void addLegacyCandidate(List<Path> candidates, Path current, Path candidate) {
+        Path normalized = candidate.toAbsolutePath().normalize();
+        if (normalized.equals(current)
+                || !Files.isRegularFile(normalized, LinkOption.NOFOLLOW_LINKS)
+                || candidates.contains(normalized)) return;
+        candidates.add(normalized);
+    }
+
+    private boolean isMigrationComplete(String key) throws SQLException {
+        try (PreparedStatement ps = connection.prepareStatement(
+                "SELECT value FROM vsu_migration WHERE key=?")) {
+            ps.setString(1, key);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() && "complete".equals(rs.getString(1).split(";", 2)[0]);
+            }
+        }
+    }
+
+    private void markMigration(String key, String value) throws SQLException {
+        try (PreparedStatement ps = connection.prepareStatement(
+                "INSERT OR REPLACE INTO vsu_migration(key,value) VALUES(?,?)")) {
+            ps.setString(1, key);
+            ps.setString(2, value);
+            ps.executeUpdate();
+        }
+    }
+
+    private void attemptVonixCoreMigration(MinecraftServer server) {
         try {
             // Skip if already completed
             try (PreparedStatement ps = connection.prepareStatement(
@@ -163,7 +271,6 @@ public final class Database {
 
             File oldDb = findVonixCoreDb(server);
             if (oldDb == null) {
-                markMigrated();
                 VonixServerUtilities.LOGGER.info("[VonixSU] No VonixCore database found — skipping migration.");
                 return;
             }

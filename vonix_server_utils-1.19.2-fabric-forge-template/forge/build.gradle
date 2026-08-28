@@ -21,6 +21,7 @@ configurations {
     compileClasspath.extendsFrom common
     runtimeClasspath.extendsFrom common
     developmentForge.extendsFrom common
+    developmentForge.extendsFrom runtimeOnly
     shadowBundle {
         canBeResolved = true
         canBeConsumed = false
@@ -52,6 +53,7 @@ dependencies {
     // baked into libsqlitejdbc.so block relocation). JarInJar at the same Maven
     // coords (3.46.1.0) as VonixGuardian 1.0.1 → Forge dedups, only one module loads.
     compileOnly 'org.xerial:sqlite-jdbc:3.46.1.0'
+    runtimeOnly('org.xerial:sqlite-jdbc:3.46.1.0') { transitive = false }
     nestedJar   'org.xerial:sqlite-jdbc:3.46.1.0'
 
     compileOnly "top.theillusivec4.curios:curios-forge:1.19.2-5.1.4.1:api"

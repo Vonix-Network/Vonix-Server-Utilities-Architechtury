@@ -1,31 +1,81 @@
 package network.vonix.serverutilities.forge;
 
-import dev.architectury.event.EventResult;
-import dev.architectury.event.events.common.CommandRegistrationEvent;
-import dev.architectury.event.events.common.EntityEvent;
-import dev.architectury.event.events.common.LifecycleEvent;
-import dev.architectury.event.events.common.PlayerEvent;
-import dev.architectury.event.events.common.TickEvent;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.RegisterCommandsEvent;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.living.LivingDeathEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.event.server.ServerStartedEvent;
+import net.minecraftforge.event.server.ServerStartingEvent;
+import net.minecraftforge.event.server.ServerStoppedEvent;
+import net.minecraftforge.event.server.ServerStoppingEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.server.ServerLifecycleHooks;
 import network.vonix.serverutilities.platform.PlatformEvents;
 
 import java.nio.file.Path;
 
+/** Native Forge event delivery for lifecycle, commands, joins, ticks, and death persistence. */
 public final class VsuPlatformEvents implements PlatformEvents {
+    private Callbacks callbacks;
+    private boolean registered;
+
     @Override
     public void register(Callbacks c) {
-        CommandRegistrationEvent.EVENT.register((dispatcher, ignoredAccess, ignoredEnvironment) -> c.commands().accept(dispatcher));
-        LifecycleEvent.SERVER_STARTING.register(server -> c.serverStarting().accept(server));
-        LifecycleEvent.SERVER_STARTED.register(server -> c.serverStarted().accept(server));
-        LifecycleEvent.SERVER_STOPPING.register(server -> c.serverStopping().accept(server));
-        LifecycleEvent.SERVER_STOPPED.register(server -> c.serverStopped().accept(server));
-        TickEvent.SERVER_POST.register(server -> c.serverTick().accept(server));
-        PlayerEvent.PLAYER_JOIN.register(player -> c.playerJoin().accept(player));
-        PlayerEvent.PLAYER_QUIT.register(player -> c.playerQuit().accept(player));
-        EntityEvent.LIVING_DEATH.register((entity, source) -> {
-            c.livingDeath().accept(entity, source);
-            return EventResult.pass();
-        });
+        if (registered) return;
+        callbacks = c;
+        registered = true;
+        MinecraftForge.EVENT_BUS.register(this);
+    }
+
+    @SubscribeEvent
+    public void onRegisterCommands(RegisterCommandsEvent event) {
+        callbacks.commands().accept(event.getDispatcher());
+    }
+
+    @SubscribeEvent
+    public void onServerStarting(ServerStartingEvent event) {
+        callbacks.serverStarting().accept(event.getServer());
+    }
+
+    @SubscribeEvent
+    public void onServerStarted(ServerStartedEvent event) {
+        callbacks.serverStarted().accept(event.getServer());
+    }
+
+    @SubscribeEvent
+    public void onServerStopping(ServerStoppingEvent event) {
+        callbacks.serverStopping().accept(event.getServer());
+    }
+
+    @SubscribeEvent
+    public void onServerStopped(ServerStoppedEvent event) {
+        callbacks.serverStopped().accept(event.getServer());
+    }
+
+    @SubscribeEvent
+    public void onServerTick(TickEvent.ServerTickEvent event) {
+        if (event.phase == TickEvent.Phase.END) {
+            MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+            if (server != null) callbacks.serverTick().accept(server);
+        }
+    }
+
+    @SubscribeEvent
+    public void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) callbacks.playerJoin().accept(player);
+    }
+
+    @SubscribeEvent
+    public void onPlayerQuit(PlayerEvent.PlayerLoggedOutEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) callbacks.playerQuit().accept(player);
+    }
+
+    @SubscribeEvent
+    public void onLivingDeath(LivingDeathEvent event) {
+        callbacks.livingDeath().accept(event.getEntity(), event.getSource());
     }
 
     @Override

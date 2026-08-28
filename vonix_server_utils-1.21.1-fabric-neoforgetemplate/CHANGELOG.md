@@ -5,6 +5,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ---
 
+## [2.0.1] — 2026-08-28
+
+### Fixed
+- Added idempotent recovery for retained VSU `data.db` snapshots. Homes and persisted `/back`/`/backdeath` rows are imported transactionally into the current VSU database without modifying the source snapshot or overwriting destination rows.
+- Recovery marks a source complete only after schema validation and a successful transaction.
+- Preserved `/back` and `/backdeath` as separate persisted location kinds.
+
 ## [1.4.0] — 2026-06-27
 
 ### Fixed

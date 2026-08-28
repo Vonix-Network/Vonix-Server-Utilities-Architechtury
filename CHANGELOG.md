@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2026-08-28
+
+### Fixed
+- Added idempotent recovery for retained VSU `data.db` snapshots. Homes and persisted `/back`/`/backdeath` rows are imported transactionally into the current VSU database without modifying the source snapshot or overwriting destination rows.
+- Recovery now records a content-fingerprint marker only after a recognized source imports successfully; missing, malformed, or empty non-VSU sources remain eligible for later retry.
+- Forge 1.18.2, 1.19.2, and 1.20.1 now deliver command, lifecycle, player, tick, and death events through native Forge subscribers. `/back` and `/backdeath` therefore reach the common command/death handlers on legacy Forge servers.
+- Added a SQLite regression test covering source immutability, home recovery, distinct normal/death back rows, and idempotent reruns.
+
+### Compatibility
+- Existing VSU installations keep using `config/vonix_server_utilities/data.db`; no database reset or destructive migration is required. Recovery scans only explicitly named retained VSU backup paths.
+
 ## [2.0.0] - 2026-08-28
 
 Common-generation repository release. This release starts the shared repository/layout and embedded version line at `2.0.0` without rewriting historical release tags.

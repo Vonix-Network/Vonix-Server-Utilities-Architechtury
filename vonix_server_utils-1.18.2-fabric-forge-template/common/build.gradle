@@ -4,6 +4,7 @@ architectury {
 
 dependencies {
     compileOnly 'org.xerial:sqlite-jdbc:3.45.1.0'
+    testImplementation 'org.xerial:sqlite-jdbc:3.45.1.0'
     // We depend on Fabric Loader here to use the Fabric @Environment annotations,
     // which get remapped to the correct annotations on each platform.
     // Do NOT use other classes from Fabric Loader.
@@ -30,8 +31,16 @@ tasks.register('muteStateTest', JavaExec) {
     mainClass = 'network.vonix.serverutilities.moderation.MuteStateTest'
 }
 
+tasks.register('vsuLegacyMigrationTest', JavaExec) {
+    group = 'verification'
+    description = 'Runs VSU database recovery, source-integrity, and back/death separation checks.'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'network.vonix.serverutilities.database.VsuLegacyMigrationTest'
+}
+
 tasks.named('check') {
     dependsOn tasks.named('crateRulesTest')
     dependsOn tasks.named('muteStateTest')
+    dependsOn tasks.named('vsuLegacyMigrationTest')
 }
 

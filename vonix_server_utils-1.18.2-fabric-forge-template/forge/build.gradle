@@ -21,6 +21,7 @@ configurations {
     compileClasspath.extendsFrom common
     runtimeClasspath.extendsFrom common
     developmentForge.extendsFrom common
+    developmentForge.extendsFrom runtimeOnly
 
     // Files in this configuration will be bundled into your mod using the Shadow plugin.
     // Don't use the `shadow` configuration from the plugin itself as it's meant for excluding files.
@@ -62,6 +63,7 @@ dependencies {
     // VonixGuardian 1.0.1 in JPMS — JarInJar at the same Maven coords (3.46.1.0)
     // lets Forge's nested-jar resolver dedup so only one sqlite module loads.
     compileOnly 'org.xerial:sqlite-jdbc:3.46.1.0'
+    runtimeOnly('org.xerial:sqlite-jdbc:3.46.1.0') { transitive = false }
     nestedJar   'org.xerial:sqlite-jdbc:3.46.1.0'
 }
 
