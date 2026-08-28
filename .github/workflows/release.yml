@@ -51,7 +51,7 @@ jobs:
           JAR_PATTERN: ${{ matrix.pattern }}
         run: |
           set -euo pipefail
-          JAR="$(find build/libs -maxdepth 1 -type f -name "$JAR_PATTERN" ! -name '*sources*' ! -name '*dev*' ! -name '*shadow*' ! -name '*slim*' | head -n 1)"
+          JAR="$(find . -type f -path '*/build/libs/*.jar' -name "$JAR_PATTERN" ! -name '*sources*' ! -name '*dev*' ! -name '*shadow*' ! -name '*slim*' | head -n 1)"
           test -n "$JAR"
           mkdir -p "$RUNNER_TEMP/release"
           cp "$JAR" "$RUNNER_TEMP/release/${{ matrix.asset_name }}.jar"

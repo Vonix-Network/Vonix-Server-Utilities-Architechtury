@@ -18,6 +18,7 @@ Common-generation repository release. This release starts the shared repository/
 ### Build
 - All supported lanes embed `2.0.0`; the 26.1.2 artifact is `vonix_server_utilities-2.0.0.jar`.
 - The tag-triggered CI workflow is the source of build/package evidence for this release. Earlier R14 static evidence is not reused after the embedded version metadata change.
+- Corrected the conditional core include-graph check so standalone version templates do not require the repository-root verification task.
 - CI runs Loom under Java 21 for the 1.18.2–1.21.1 lanes and Java 25/Gradle 9.2.0 for 26.1.2.
 
 ## [Unreleased]
