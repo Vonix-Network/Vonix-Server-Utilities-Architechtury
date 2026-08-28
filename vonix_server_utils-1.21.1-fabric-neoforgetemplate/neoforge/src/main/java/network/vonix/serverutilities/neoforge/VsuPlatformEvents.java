@@ -34,6 +34,11 @@ public final class VsuPlatformEvents implements PlatformEvents {
     }
 
     @Override
+    public String platformDisplay() {
+        return "NeoForge";
+    }
+
+    @Override
     public boolean easyNpcInstalled() {
         return false;
     }
