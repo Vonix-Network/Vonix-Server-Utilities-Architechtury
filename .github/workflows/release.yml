@@ -17,12 +17,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { project: 'vonix_server_utils-1.18.2-fabric-forge-template', loader: 'fabric', jdk: '17', gradle: '8.10.2', asset_name: 'vsu-1.18.2-fabric', pattern: 'vonix_server_utilities-fabric-*.jar' }
-          - { project: 'vonix_server_utils-1.18.2-fabric-forge-template', loader: 'forge', jdk: '17', gradle: '8.10.2', asset_name: 'vsu-1.18.2-forge', pattern: 'vonix_server_utilities-forge-*.jar' }
-          - { project: 'vonix_server_utils-1.19.2-fabric-forge-template', loader: 'fabric', jdk: '17', gradle: '8.10.2', asset_name: 'vsu-1.19.2-fabric', pattern: 'vonix_server_utilities-fabric-*.jar' }
-          - { project: 'vonix_server_utils-1.19.2-fabric-forge-template', loader: 'forge', jdk: '17', gradle: '8.10.2', asset_name: 'vsu-1.19.2-forge', pattern: 'vonix_server_utilities-forge-*.jar' }
-          - { project: 'vonix_server_utils-1.20.1-fabric-forge-template', loader: 'fabric', jdk: '17', gradle: '8.10.2', asset_name: 'vsu-1.20.1-fabric', pattern: 'vonix_server_utilities-fabric-*.jar' }
-          - { project: 'vonix_server_utils-1.20.1-fabric-forge-template', loader: 'forge', jdk: '17', gradle: '8.10.2', asset_name: 'vsu-1.20.1-forge', pattern: 'vonix_server_utilities-forge-*.jar' }
+          - { project: 'vonix_server_utils-1.18.2-fabric-forge-template', loader: 'fabric', jdk: '21', gradle: '8.10.2', asset_name: 'vsu-1.18.2-fabric', pattern: 'vonix_server_utilities-fabric-*.jar' }
+          - { project: 'vonix_server_utils-1.18.2-fabric-forge-template', loader: 'forge', jdk: '21', gradle: '8.10.2', asset_name: 'vsu-1.18.2-forge', pattern: 'vonix_server_utilities-forge-*.jar' }
+          - { project: 'vonix_server_utils-1.19.2-fabric-forge-template', loader: 'fabric', jdk: '21', gradle: '8.10.2', asset_name: 'vsu-1.19.2-fabric', pattern: 'vonix_server_utilities-fabric-*.jar' }
+          - { project: 'vonix_server_utils-1.19.2-fabric-forge-template', loader: 'forge', jdk: '21', gradle: '8.10.2', asset_name: 'vsu-1.19.2-forge', pattern: 'vonix_server_utilities-forge-*.jar' }
+          - { project: 'vonix_server_utils-1.20.1-fabric-forge-template', loader: 'fabric', jdk: '21', gradle: '8.10.2', asset_name: 'vsu-1.20.1-fabric', pattern: 'vonix_server_utilities-fabric-*.jar' }
+          - { project: 'vonix_server_utils-1.20.1-fabric-forge-template', loader: 'forge', jdk: '21', gradle: '8.10.2', asset_name: 'vsu-1.20.1-forge', pattern: 'vonix_server_utilities-forge-*.jar' }
           - { project: 'vonix_server_utils-1.21.1-fabric-neoforgetemplate', loader: 'fabric', jdk: '21', gradle: '8.14', asset_name: 'vsu-1.21.1-fabric', pattern: 'vonix_server_utilities-fabric-*.jar' }
           - { project: 'vonix_server_utils-1.21.1-fabric-neoforgetemplate', loader: 'neoforge', jdk: '21', gradle: '8.14', asset_name: 'vsu-1.21.1-neoforge', pattern: 'vonix_server_utilities-neoforge-*.jar' }
           - { project: 'vonix_server_utils-26.1.2-neoforge-template', loader: 'neoforge', jdk: '25', gradle: '9.2.0', asset_name: 'vsu-26.1.2-neoforge', pattern: 'vonix_server_utilities-*.jar' }
