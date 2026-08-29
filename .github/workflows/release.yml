@@ -89,7 +89,7 @@ jobs:
           {
             echo "## Vonix Server Utilities ${GITHUB_REF_NAME}"
             echo
-            echo "Common-generation stable release 2.0.0. All nine supported Minecraft/loader lanes are built by GitHub Actions from this tag."
+            echo "Stable release ${VERSION}. All nine supported Minecraft/loader lanes are built by GitHub Actions from this tag."
             echo
             echo "### Artifact matrix"
             echo
