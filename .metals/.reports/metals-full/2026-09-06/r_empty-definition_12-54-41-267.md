@@ -1,3 +1,14 @@
+error id: file:///C:/Users/Anwender/Vonix-Server-Utilities/vonix_server_utils-1.18.2-fabric-forge-template/common/src/main/java/network/vonix/serverutilities/kits/KitManager.java:java/lang/String#toLowerCase(+1).
+file:///C:/Users/Anwender/Vonix-Server-Utilities/vonix_server_utils-1.18.2-fabric-forge-template/common/src/main/java/network/vonix/serverutilities/kits/KitManager.java
+empty definition using pc, found symbol in pc: 
+empty definition using semanticdb
+empty definition using fallback
+non-local guesses:
+
+offset: 11513
+uri: file:///C:/Users/Anwender/Vonix-Server-Utilities/vonix_server_utils-1.18.2-fabric-forge-template/common/src/main/java/network/vonix/serverutilities/kits/KitManager.java
+text:
+```scala
 package network.vonix.serverutilities.kits;
 
 import com.google.gson.Gson;
@@ -90,15 +101,10 @@ public final class KitManager {
                 if (!el.isJsonObject()) continue;
                 JsonObject k = el.getAsJsonObject();
                 String name = k.has("name") ? k.get("name").getAsString() : null;
-                
                 if (name == null || name.isBlank()) {
                     VonixServerUtilities.LOGGER.warn("[VonixSU] kits.json: skipping nameless entry");
                     continue;
                 }
-
-                String group = k.has("group") ? k.get("group").getAsString() : name;
-                KitGroup kitGroup = new KitGroup(group.toLowerCase());
-
                 int cooldown = k.has("cooldown_seconds") ? k.get("cooldown_seconds").getAsInt() : 3600;
                 boolean oneTime = k.has("one_time") && k.get("one_time").getAsBoolean();
 
@@ -119,7 +125,7 @@ public final class KitManager {
                         items.add(new KitItem(itemId, count));
                     }
                 }
-                next.put(name.toLowerCase(), new Kit(name.toLowerCase(), kitGroup, items, cooldown, oneTime));
+                next.put(name.toLowerCase(), new Kit(name.toLowerCase(), items, cooldown, oneTime));
             }
             kits.clear();
             kits.putAll(next);
@@ -184,18 +190,18 @@ public final class KitManager {
 
     /** Fallback used only if kits.json is broken and unrecoverable. */
     private void seedHardcodedDefaults() {
-        register(new Kit("starter", new KitGroup("starter"), List.of(
+        register(new Kit("starter", "starter", List.of(
                 new KitItem("minecraft:stone_sword", 1),
                 new KitItem("minecraft:stone_pickaxe", 1),
                 new KitItem("minecraft:stone_axe", 1),
                 new KitItem("minecraft:bread", 16),
                 new KitItem("minecraft:torch", 32)), 3600, false));
-        register(new Kit("tools", new KitGroup("tools"), List.of(
+        register(new Kit("tools", "tools", List.of(
                 new KitItem("minecraft:iron_pickaxe", 1),
                 new KitItem("minecraft:iron_axe", 1),
                 new KitItem("minecraft:iron_shovel", 1),
                 new KitItem("minecraft:iron_hoe", 1)), 7200, false));
-        register(new Kit("food", new KitGroup("food"), List.of(
+        register(new Kit("food", "food", List.of(
                 new KitItem("minecraft:cooked_beef", 32),
                 new KitItem("minecraft:golden_apple", 2),
                 new KitItem("minecraft:cake", 1)), 1800, false));
@@ -212,7 +218,7 @@ public final class KitManager {
             ResourceLocation id = Registry.ITEM.getKey(s.getItem());
             items.add(new KitItem(id.toString(), s.getCount()));
         }
-        register(new Kit(name.toLowerCase(), new KitGroup(name.toLowerCase()), items, 3600, false));
+        register(new Kit(name.toLowerCase(), items, 3600, false));
     }
 
     // ── DB-thread operations ──────────────────────────────────────────────────
@@ -229,13 +235,13 @@ public final class KitManager {
         if (kit == null) return ClaimResult.notFound();
 
         // long lastUsed = getLastUsed(uuid, kitName);
-        long now = System.currentTimeMillis() / 1000L;
+        // long now = System.currentTimeMillis() / 1000L;
 
         long lastGroupUsed = getLastGroupUsed(uuid, kit.group().groupName());
 
-        if (kit.oneTime() && lastGroupUsed > 0) return ClaimResult.alreadyClaimed();
+        if (kit.oneTime() && lastGroupUsed) return ClaimResult.alreadyClaimed();
 
-        long remaining = (lastGroupUsed + kit.cooldownSeconds()) - now;
+        long remaining = (lastUsed + kit.cooldownSeconds()) - now;
         if (remaining > 0) return ClaimResult.onCooldown((int) remaining);
 
         setLastUsed(uuid, kitName, kit.group().groupName(), now);
@@ -261,25 +267,15 @@ public final class KitManager {
     */
    
     private long getLastGroupUsed(UUID uuid, String groupName) {
-        try (PreparedStatement ps = conn().prepareStatement(
-                "SELECT last_used FROM vsu_kit_cooldowns WHERE uuid=? AND claim_group=? ORDER BY last_used DESC LIMIT 1")) {
-            ps.setString(1, uuid.toString());
-            ps.setString(2, groupName.toLowerCase());
-            ResultSet rs = ps.executeQuery();
-            if (rs.next()) return rs.getLong(1);
-        } catch (SQLException e) {
-            VonixServerUtilities.LOGGER.error("[VonixSU] getLastGroupUsed failed", e);
-        }
-        return 0;
+        
     }
 
-    private void setLastUsed(UUID uuid, String kitName, String group, long time) {
+    private void setLastUsed(UUID uuid, String@@ kitName, long time) {
         try (PreparedStatement ps = conn().prepareStatement(
-                "INSERT OR REPLACE INTO vsu_kit_cooldowns (uuid, kit_name, claim_group, last_used) VALUES(?,?,?,?)")) {
+                "INSERT OR REPLACE INTO vsu_kit_cooldowns VALUES(?,?,?)")) {
             ps.setString(1, uuid.toString());
             ps.setString(2, kitName.toLowerCase());
-            ps.setString(3, group.toLowerCase());
-            ps.setLong  (4, time);
+            ps.setLong  (3, time);
             ps.executeUpdate();
         } catch (SQLException e) {
             VonixServerUtilities.LOGGER.error("[VonixSU] setLastUsed failed", e);
@@ -340,3 +336,10 @@ public final class KitManager {
     public record KitItem(String itemId, int count) {}
     public record KitGroup(String groupName) {}
 }
+
+```
+
+
+#### Short summary: 
+
+empty definition using pc, found symbol in pc: 

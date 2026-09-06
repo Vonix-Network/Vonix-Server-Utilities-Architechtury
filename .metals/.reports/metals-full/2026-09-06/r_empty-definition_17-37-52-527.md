@@ -1,3 +1,14 @@
+error id: file:///C:/Users/Anwender/Vonix-Server-Utilities/vonix_server_utils-1.18.2-fabric-forge-template/common/src/main/java/network/vonix/serverutilities/kits/KitManager.java:_empty_/JsonArray#add#
+file:///C:/Users/Anwender/Vonix-Server-Utilities/vonix_server_utils-1.18.2-fabric-forge-template/common/src/main/java/network/vonix/serverutilities/kits/KitManager.java
+empty definition using pc, found symbol in pc: _empty_/JsonArray#add#
+empty definition using semanticdb
+empty definition using fallback
+non-local guesses:
+
+offset: 6764
+uri: file:///C:/Users/Anwender/Vonix-Server-Utilities/vonix_server_utils-1.18.2-fabric-forge-template/common/src/main/java/network/vonix/serverutilities/kits/KitManager.java
+text:
+```scala
 package network.vonix.serverutilities.kits;
 
 import com.google.gson.Gson;
@@ -148,7 +159,7 @@ public final class KitManager {
                 {"minecraft:bread",         "16"},
                 {"minecraft:torch",         "32"},
         }));
-        arr.add(makeKitJson("tools", "tools", 7200, false, new String[][]{
+        arr.ad@@d(makeKitJson("tools", "tools", 7200, false, new String[][]{
                 {"minecraft:iron_pickaxe", "1"},
                 {"minecraft:iron_axe",     "1"},
                 {"minecraft:iron_shovel",  "1"},
@@ -340,3 +351,10 @@ public final class KitManager {
     public record KitItem(String itemId, int count) {}
     public record KitGroup(String groupName) {}
 }
+
+```
+
+
+#### Short summary: 
+
+empty definition using pc, found symbol in pc: _empty_/JsonArray#add#

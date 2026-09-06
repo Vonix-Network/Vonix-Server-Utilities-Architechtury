@@ -1,3 +1,14 @@
+error id: file:///C:/Users/Anwender/Vonix-Server-Utilities/vonix_server_utils-1.18.2-fabric-forge-template/common/src/main/java/network/vonix/serverutilities/kits/KitManager.java:_empty_/JsonObject#has#
+file:///C:/Users/Anwender/Vonix-Server-Utilities/vonix_server_utils-1.18.2-fabric-forge-template/common/src/main/java/network/vonix/serverutilities/kits/KitManager.java
+empty definition using pc, found symbol in pc: _empty_/JsonObject#has#
+empty definition using semanticdb
+empty definition using fallback
+non-local guesses:
+
+offset: 4181
+uri: file:///C:/Users/Anwender/Vonix-Server-Utilities/vonix_server_utils-1.18.2-fabric-forge-template/common/src/main/java/network/vonix/serverutilities/kits/KitManager.java
+text:
+```scala
 package network.vonix.serverutilities.kits;
 
 import com.google.gson.Gson;
@@ -95,11 +106,7 @@ public final class KitManager {
                     VonixServerUtilities.LOGGER.warn("[VonixSU] kits.json: skipping nameless entry");
                     continue;
                 }
-
-                String group = k.has("group") ? k.get("group").getAsString() : name;
-                KitGroup kitGroup = new KitGroup(group.toLowerCase());
-
-                int cooldown = k.has("cooldown_seconds") ? k.get("cooldown_seconds").getAsInt() : 3600;
+                int cooldown = k.has@@("cooldown_seconds") ? k.get("cooldown_seconds").getAsInt() : 3600;
                 boolean oneTime = k.has("one_time") && k.get("one_time").getAsBoolean();
 
                 List<KitItem> items = new ArrayList<>();
@@ -275,7 +282,7 @@ public final class KitManager {
 
     private void setLastUsed(UUID uuid, String kitName, String group, long time) {
         try (PreparedStatement ps = conn().prepareStatement(
-                "INSERT OR REPLACE INTO vsu_kit_cooldowns (uuid, kit_name, claim_group, last_used) VALUES(?,?,?,?)")) {
+                "INSERT OR REPLACE INTO vsu_kit_cooldowns VALUES(?,?,?,?)")) {
             ps.setString(1, uuid.toString());
             ps.setString(2, kitName.toLowerCase());
             ps.setString(3, group.toLowerCase());
@@ -340,3 +347,10 @@ public final class KitManager {
     public record KitItem(String itemId, int count) {}
     public record KitGroup(String groupName) {}
 }
+
+```
+
+
+#### Short summary: 
+
+empty definition using pc, found symbol in pc: _empty_/JsonObject#has#
